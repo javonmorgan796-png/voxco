@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 interface TeamLogoProps {
-  src: string;
+  src?: string | null;
   alt: string;
   size?: "xs" | "sm" | "md" | "lg" | "xl";
   className?: string;
