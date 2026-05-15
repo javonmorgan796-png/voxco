@@ -125,7 +125,7 @@ export const useAdminData = () => {
     if (status === "approved" && before && !before.credited_at) patch.credited_at = new Date().toISOString();
     if (status === "rejected") patch.reject_reason = rejectReason || null;
     if (status !== "rejected") patch.reject_reason = null;
-    const { error } = await supabase.from("deposit_requests").update(patch).eq("id", id);
+    const { error } = await supabase.from("deposit_requests").update(patch as any).eq("id", id);
     if (!error) await writeAudit(`deposit_${status}`, "deposit_request", id,
       { status: before?.status, reject_reason: before?.reject_reason ?? null },
       { status, credited_at: patch.credited_at, reject_reason: patch.reject_reason });
@@ -136,7 +136,7 @@ export const useAdminData = () => {
     const patch: Record<string, unknown> = { status, reviewed_at: new Date().toISOString() };
     if (status === "rejected") patch.reject_reason = rejectReason || null;
     if (status !== "rejected") patch.reject_reason = null;
-    const { error } = await supabase.from("withdrawal_requests").update(patch).eq("id", id);
+    const { error } = await supabase.from("withdrawal_requests").update(patch as any).eq("id", id);
     if (!error) await writeAudit(`withdrawal_${status}`, "withdrawal_request", id,
       { status: before?.status, reject_reason: before?.reject_reason ?? null },
       { status, reject_reason: patch.reject_reason });
@@ -151,7 +151,7 @@ export const useAdminData = () => {
 
   const updateDeposit = async (id: string, patch: Partial<Pick<DepositRow, "amount_usd" | "crypto" | "tx_hash" | "note" | "bank_name" | "bank_account" | "bank_reference">>) => {
     const before = deposits.find((d) => d.id === id) as unknown as Record<string, unknown> | undefined;
-    const { error } = await supabase.from("deposit_requests").update(patch).eq("id", id);
+    const { error } = await supabase.from("deposit_requests").update(patch as any).eq("id", id);
     if (!error && before) {
       const d = diff(before, patch as Record<string, unknown>);
       await writeAudit("edit_deposit", "deposit_request", id, d.before, d.after);
@@ -160,7 +160,7 @@ export const useAdminData = () => {
   };
   const updateWithdrawal = async (id: string, patch: Partial<Pick<WithdrawalRow, "amount_usd" | "crypto" | "destination_address" | "note" | "bank_name" | "bank_account" | "bank_reference">>) => {
     const before = withdrawals.find((w) => w.id === id) as unknown as Record<string, unknown> | undefined;
-    const { error } = await supabase.from("withdrawal_requests").update(patch).eq("id", id);
+    const { error } = await supabase.from("withdrawal_requests").update(patch as any).eq("id", id);
     if (!error && before) {
       const d = diff(before, patch as Record<string, unknown>);
       await writeAudit("edit_withdrawal", "withdrawal_request", id, d.before, d.after);
