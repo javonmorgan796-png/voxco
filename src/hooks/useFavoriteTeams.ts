@@ -4,7 +4,7 @@ export interface FavoriteTeam {
   id: string;
   name: string;
   shortName: string;
-  logo?: string;
+  logo?: string | null;
   addedAt: string;
 }
 

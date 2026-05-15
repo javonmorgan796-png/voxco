@@ -6,8 +6,8 @@ export interface PlacedBet {
   matchId: string;
   homeTeam: string;
   awayTeam: string;
-  homeTeamLogo?: string;
-  awayTeamLogo?: string;
+ homeTeamLogo?: string | null;
+ awayTeamLogo?: string | null;
   competition: string;
   selection: "home" | "draw" | "away";
   odds: number;
