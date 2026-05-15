@@ -1,0 +1,3 @@
+export function renderErrorPage() {
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Error</title><meta name="viewport" content="width=device-width, initial-scale=1"></head><body style="font-family:system-ui;display:flex;min-height:100vh;align-items:center;justify-content:center;background:#0a0a0a;color:#fff;margin:0"><div style="text-align:center;padding:2rem"><h1>Something went wrong</h1><p style="opacity:.7">Please refresh or go home.</p><div style="margin-top:1rem"><button onclick="location.reload()" style="padding:.5rem 1rem;margin-right:.5rem">Refresh</button><a href="/" style="padding:.5rem 1rem;color:#fff">Home</a></div></div></body></html>`;
+}

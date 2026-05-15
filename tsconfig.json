@@ -15,8 +15,8 @@
 
     /* Linting */
     "skipLibCheck": true,
-    "strict": false,
-    "strictNullChecks": false,
+    "strict": true,
+    "strictNullChecks": true,
     "noImplicitAny": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
