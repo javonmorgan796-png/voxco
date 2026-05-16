@@ -7,7 +7,7 @@ interface CountdownTimerProps {
 }
 
 const CountdownTimer = ({ startTime, size = "sm" }: CountdownTimerProps) => {
-  const { days, hours, minutes, seconds, isExpired, label } = useCountdown(startTime);
+  const { days, hours, minutes, seconds, isExpired, label } = useCountdown(startTime ?? undefined);
 
   if (!startTime) return <span className="text-xs text-muted-foreground">TBD</span>;
 

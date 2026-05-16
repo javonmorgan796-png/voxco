@@ -24,7 +24,7 @@ const FavoriteTeamsScreen = ({ onClose, onSelectMatch }: FavoriteTeamsScreenProp
 
   // Get unique teams from matches
   const availableTeams = useMemo(() => {
-    const teamMap = new Map<string, { name: string; shortName: string; logo?: string }>();
+    const teamMap = new Map<string, { name: string; shortName: string; logo?: string | null }>();
     
     matches.forEach((match) => {
       if (!teamMap.has(match.homeTeam.name)) {
