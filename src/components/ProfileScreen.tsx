@@ -83,9 +83,29 @@ const ProfileScreen = ({ onClose, onOpenBetHistory, onOpenFavorites, onOpenLeade
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    toast.success("Logged out successfully");
-    window.location.reload();
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      toast.success("Logged out successfully");
+    } catch (err) {
+      console.error("Logout error:", err);
+      toast.error("Sign-out failed — clearing session locally");
+    } finally {
+      // Best-effort local cleanup even if remote sign-out fails (network/expired token)
+      try {
+        await supabase.auth.signOut({ scope: "local" });
+      } catch (e) {
+        console.warn("Local signOut fallback failed:", e);
+      }
+      try {
+        Object.keys(localStorage)
+          .filter((k) => k.startsWith("sb-") || k.includes("supabase"))
+          .forEach((k) => localStorage.removeItem(k));
+      } catch {
+        /* ignore storage errors */
+      }
+      window.location.href = "/";
+    }
   };
 
   const menuItems = [
