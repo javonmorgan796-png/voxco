@@ -2,7 +2,7 @@ import { useCountdown } from "@/hooks/useCountdown";
 import { Clock } from "lucide-react";
 
 interface CountdownTimerProps {
-  startTime: string | undefined;
+  startTime: string | null | undefined;
   size?: "sm" | "md";
 }
 
