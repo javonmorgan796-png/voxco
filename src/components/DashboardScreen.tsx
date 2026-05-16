@@ -29,37 +29,37 @@ const DashboardScreen = ({ onOpenLive, onViewAllMatches, onSelectMatch, onOpenWa
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="sticky top-0 z-20 bg-background/80 backdrop-blur-lg border-b border-border/50 p-4"
+        className="sticky top-0 z-20 bg-background/85 backdrop-blur-xl border-b border-border/50 px-3 py-3 sm:px-4 sm:py-4"
       >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center overflow-hidden">
-              <span className="text-lg font-bold text-primary">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center overflow-hidden ring-1 ring-border/40">
+              <span className="text-base sm:text-lg font-bold text-primary">
                 {(profile?.displayName || profile?.username || "U").charAt(0).toUpperCase()}
               </span>
             </div>
-            <div>
-              <p className="text-muted-foreground text-xs">
+            <div className="min-w-0 flex-1">
+              <p className="text-muted-foreground text-[11px] sm:text-xs leading-tight truncate">
                 {new Date().getHours() < 12 ? "Good Morning" : new Date().getHours() < 18 ? "Good Afternoon" : "Good Evening"}
               </p>
-              <h2 className="font-semibold text-foreground">
+              <h2 className="font-semibold text-sm sm:text-base text-foreground leading-tight truncate">
                 {profile?.displayName || profile?.username || "Guest"}
               </h2>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button 
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
               onClick={onOpenWallet}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-full glass-card hover:bg-muted/50 transition-colors"
+              className="flex items-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-full glass-card hover:bg-muted/50 transition-colors"
             >
               <Wallet className="w-4 h-4 text-primary" />
-              <span className="text-sm font-bold text-foreground">${balance.toFixed(0)}</span>
+              <span className="text-xs sm:text-sm font-bold text-foreground">${balance.toFixed(0)}</span>
             </button>
-            <button 
+            <button
               onClick={onOpenNotifications}
-              className="w-10 h-10 rounded-full glass-card flex items-center justify-center hover:bg-muted/50 transition-colors relative"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full glass-card flex items-center justify-center hover:bg-muted/50 transition-colors relative"
             >
-              <Bell className="w-5 h-5 text-muted-foreground" />
+              <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
               {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-primary text-primary-foreground text-[10px] rounded-full flex items-center justify-center font-bold px-1">
                   {unreadCount > 9 ? '9+' : unreadCount}
