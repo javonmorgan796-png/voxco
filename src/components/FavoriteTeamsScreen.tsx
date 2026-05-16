@@ -66,8 +66,8 @@ const FavoriteTeamsScreen = ({ onClose, onSelectMatch }: FavoriteTeamsScreenProp
     ).slice(0, 10);
   }, [matches, favoriteTeams]);
 
-  const handleAddTeam = (team: { name: string; shortName: string; logo?: string }) => {
-    addFavoriteTeam(team);
+  const handleAddTeam = (team: { name: string; shortName: string; logo?: string | null }) => {
+    addFavoriteTeam({ ...team, logo: team.logo ?? undefined });
     setSearchQuery("");
   };
 
