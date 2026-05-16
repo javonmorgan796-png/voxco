@@ -2,12 +2,12 @@ import { useCountdown } from "@/hooks/useCountdown";
 import { Clock } from "lucide-react";
 
 interface CountdownTimerProps {
-  startTime: string | undefined;
+  startTime: string | null | undefined;
   size?: "sm" | "md";
 }
 
 const CountdownTimer = ({ startTime, size = "sm" }: CountdownTimerProps) => {
-  const { days, hours, minutes, seconds, isExpired, label } = useCountdown(startTime);
+  const { days, hours, minutes, seconds, isExpired, label } = useCountdown(startTime ?? undefined);
 
   if (!startTime) return <span className="text-xs text-muted-foreground">TBD</span>;
 

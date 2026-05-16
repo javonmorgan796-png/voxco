@@ -208,7 +208,7 @@ const LiveMatchView = ({ onClose, selectedMatch }: LiveMatchViewProps) => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <img 
-              src={match.competition.logo}
+              src={match.competition.logo ?? undefined}
               alt={match.competition.name}
               className="h-6 w-auto object-contain"
               onError={(e) => (e.currentTarget.style.display = 'none')}
