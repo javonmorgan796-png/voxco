@@ -94,31 +94,40 @@ const ProfileScreen = ({ onClose, onOpenBetHistory, onOpenFavorites, onOpenLeade
     toast.info("Help & Support", { description: "Contact us at support@livefooty.app" });
   };
 
-  const handleLogout = async () => {
+  const performLogout = async () => {
+    setLoggingOut(true);
+    // 1. Optimistically reset local auth/session state IMMEDIATELY so UI
+    //    flips to signed-out even if the remote signOut hangs or fails.
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      toast.success("Logged out successfully");
-    } catch (err) {
-      console.error("Logout error:", err);
-      toast.error("Sign-out failed — clearing session locally");
-    } finally {
-      // Best-effort local cleanup even if remote sign-out fails (network/expired token)
-      try {
-        await supabase.auth.signOut({ scope: "local" });
-      } catch (e) {
-        console.warn("Local signOut fallback failed:", e);
-      }
-      try {
-        Object.keys(localStorage)
-          .filter((k) => k.startsWith("sb-") || k.includes("supabase"))
-          .forEach((k) => localStorage.removeItem(k));
-      } catch {
-        /* ignore storage errors */
-      }
-      window.location.href = "/";
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith("sb-") || k.includes("supabase"))
+        .forEach((k) => localStorage.removeItem(k));
+    } catch {
+      /* ignore storage errors */
     }
+    try {
+      sessionStorage.clear();
+    } catch {
+      /* ignore */
+    }
+
+    // 2. Fire remote signOut in background — don't block navigation on it.
+    Promise.resolve(supabase.auth.signOut({ scope: "local" })).catch(() => {});
+    supabase.auth
+      .signOut()
+      .then(({ error }) => {
+        if (error) console.warn("Remote signOut failed (ignored):", error);
+      })
+      .catch((err) => console.warn("Remote signOut threw (ignored):", err));
+
+    toast.success("Logged out");
+    // 3. Hard reload to "/" so every in-memory store/query resets.
+    setTimeout(() => {
+      window.location.href = "/";
+    }, 50);
   };
+
+  const handleLogout = () => setShowLogoutConfirm(true);
 
   const menuItems = [
     { 
