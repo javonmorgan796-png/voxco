@@ -5,6 +5,16 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Switch } from "@/components/ui/switch";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useFavoriteTeams } from "@/hooks/useFavoriteTeams";
 import { useBetHistory } from "@/hooks/useBetHistory";
 import { useUserProfile } from "@/hooks/useUserProfile";
