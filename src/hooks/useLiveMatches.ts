@@ -62,53 +62,48 @@ export const useLiveMatches = (
   const [error, setError] = useState<string | null>(null);
   const [dataSource, setDataSource] = useState<"api" | "simulation">("api");
 
+  const loadSimulation = useCallback(() => {
+    const allLocal = [liveMatch, ...upcomingMatches, ...featuredMatches];
+    const simulated: ApiMatch[] = allLocal.map((m) => ({
+      id: m.id,
+      homeTeam: { name: m.homeTeam.name, shortName: m.homeTeam.shortName, logo: m.homeTeam.logo },
+      awayTeam: { name: m.awayTeam.name, shortName: m.awayTeam.shortName, logo: m.awayTeam.logo },
+      homeScore: m.homeScore,
+      awayScore: m.awayScore,
+      minute: m.minute || null,
+      status: m.status,
+      competition: { name: m.competition.name, logo: m.competition.logo },
+      venue: m.venue || null,
+      startTime: null,
+    }));
+    const filtered = endpoint === "live" ? simulated.filter(s => s.status === "live")
+      : endpoint === "upcoming" ? simulated.filter(s => s.status === "upcoming")
+      : endpoint === "finished" ? simulated.filter(s => s.status === "finished")
+      : simulated;
+    setMatches(filtered);
+    setDataSource("simulation");
+    setError(null);
+    setIsLoading(false);
+  }, [endpoint]);
+
   const fetchMatches = useCallback(async () => {
     try {
-      console.log(`Fetching ${endpoint} matches from API...`);
-      
       const { data, error: fetchError } = await supabase.functions.invoke("live-matches", {
         body: { endpoint, sport: "football" },
       });
 
       if (fetchError) {
-        console.error("Edge function error:", fetchError);
-        setError(fetchError.message);
-        setDataSource("simulation");
+        loadSimulation();
         return;
       }
 
       if (data?.useSimulation) {
-        console.log("API unavailable, using local simulation data:", data.message);
-        setDataSource("simulation");
-        // Provide simulated matches from local data instead of empty
-        const allLocal = [liveMatch, ...upcomingMatches, ...featuredMatches];
-        const simulated: ApiMatch[] = allLocal.map((m) => ({
-          id: m.id,
-          homeTeam: { name: m.homeTeam.name, shortName: m.homeTeam.shortName, logo: m.homeTeam.logo },
-          awayTeam: { name: m.awayTeam.name, shortName: m.awayTeam.shortName, logo: m.awayTeam.logo },
-          homeScore: m.homeScore,
-          awayScore: m.awayScore,
-          minute: m.minute || null,
-          status: m.status,
-          competition: { name: m.competition.name, logo: m.competition.logo },
-          venue: m.venue || null,
-          startTime: null,
-        }));
-        const filtered = endpoint === "live" ? simulated.filter(s => s.status === "live")
-          : endpoint === "upcoming" ? simulated.filter(s => s.status === "upcoming")
-          : endpoint === "finished" ? simulated.filter(s => s.status === "finished")
-          : simulated;
-        setMatches(filtered);
-        setError(null);
-        setIsLoading(false);
+        loadSimulation();
         return;
       }
 
       if (data?.matches && Array.isArray(data.matches)) {
         setDataSource("api");
-        console.log(`Received ${data.matches.length} ${endpoint} matches from API`);
-        
-        // Transform API matches to our format (no limit - return all)
         const transformedMatches: ApiMatch[] = data.matches.map((m: any) => ({
           id: m.id,
           homeTeam: {
@@ -133,17 +128,21 @@ export const useLiveMatches = (
           startTime: m.startTime || null,
         }));
 
+        if (transformedMatches.length === 0) {
+          loadSimulation();
+          return;
+        }
         setMatches(transformedMatches);
         setError(null);
+      } else {
+        loadSimulation();
       }
     } catch (err) {
-      console.error("Fetch error:", err);
-      setError(err instanceof Error ? err.message : "Failed to fetch matches");
-      setDataSource("simulation");
+      loadSimulation();
     } finally {
       setIsLoading(false);
     }
-  }, [endpoint]);
+  }, [endpoint, loadSimulation]);
 
   // Initial fetch
   useEffect(() => {
