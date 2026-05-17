@@ -377,6 +377,28 @@ const ProfileScreen = ({ onClose, onOpenBetHistory, onOpenFavorites, onOpenLeade
           <span className="font-medium">Log Out</span>
         </motion.button>
       </div>
+
+      <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Log out of Betnaro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You'll need to sign back in to place bets, manage your wallet, or
+              access VIP picks.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={loggingOut}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={performLogout}
+              disabled={loggingOut}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {loggingOut ? "Logging out…" : "Log out"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </motion.div>
   );
 };
