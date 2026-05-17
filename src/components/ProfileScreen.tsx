@@ -50,6 +50,8 @@ const ProfileScreen = ({ onClose, onOpenBetHistory, onOpenFavorites, onOpenLeade
   const { bets, getTotalWinnings, getTotalLosses } = useBetHistory();
   const { profile } = useUserProfile();
   const { balance } = useWallet();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const totalWinnings = getTotalWinnings();
   const totalLosses = getTotalLosses();
