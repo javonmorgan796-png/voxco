@@ -5,6 +5,16 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Switch } from "@/components/ui/switch";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useFavoriteTeams } from "@/hooks/useFavoriteTeams";
 import { useBetHistory } from "@/hooks/useBetHistory";
 import { useUserProfile } from "@/hooks/useUserProfile";
@@ -40,6 +50,8 @@ const ProfileScreen = ({ onClose, onOpenBetHistory, onOpenFavorites, onOpenLeade
   const { bets, getTotalWinnings, getTotalLosses } = useBetHistory();
   const { profile } = useUserProfile();
   const { balance } = useWallet();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const totalWinnings = getTotalWinnings();
   const totalLosses = getTotalLosses();
@@ -82,31 +94,40 @@ const ProfileScreen = ({ onClose, onOpenBetHistory, onOpenFavorites, onOpenLeade
     toast.info("Help & Support", { description: "Contact us at support@livefooty.app" });
   };
 
-  const handleLogout = async () => {
+  const performLogout = async () => {
+    setLoggingOut(true);
+    // 1. Optimistically reset local auth/session state IMMEDIATELY so UI
+    //    flips to signed-out even if the remote signOut hangs or fails.
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      toast.success("Logged out successfully");
-    } catch (err) {
-      console.error("Logout error:", err);
-      toast.error("Sign-out failed — clearing session locally");
-    } finally {
-      // Best-effort local cleanup even if remote sign-out fails (network/expired token)
-      try {
-        await supabase.auth.signOut({ scope: "local" });
-      } catch (e) {
-        console.warn("Local signOut fallback failed:", e);
-      }
-      try {
-        Object.keys(localStorage)
-          .filter((k) => k.startsWith("sb-") || k.includes("supabase"))
-          .forEach((k) => localStorage.removeItem(k));
-      } catch {
-        /* ignore storage errors */
-      }
-      window.location.href = "/";
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith("sb-") || k.includes("supabase"))
+        .forEach((k) => localStorage.removeItem(k));
+    } catch {
+      /* ignore storage errors */
     }
+    try {
+      sessionStorage.clear();
+    } catch {
+      /* ignore */
+    }
+
+    // 2. Fire remote signOut in background — don't block navigation on it.
+    Promise.resolve(supabase.auth.signOut({ scope: "local" })).catch(() => {});
+    supabase.auth
+      .signOut()
+      .then(({ error }) => {
+        if (error) console.warn("Remote signOut failed (ignored):", error);
+      })
+      .catch((err) => console.warn("Remote signOut threw (ignored):", err));
+
+    toast.success("Logged out");
+    // 3. Hard reload to "/" so every in-memory store/query resets.
+    setTimeout(() => {
+      window.location.href = "/";
+    }, 50);
   };
+
+  const handleLogout = () => setShowLogoutConfirm(true);
 
   const menuItems = [
     { 
@@ -356,6 +377,28 @@ const ProfileScreen = ({ onClose, onOpenBetHistory, onOpenFavorites, onOpenLeade
           <span className="font-medium">Log Out</span>
         </motion.button>
       </div>
+
+      <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Log out of Betnaro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You'll need to sign back in to place bets, manage your wallet, or
+              access VIP picks.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={loggingOut}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={performLogout}
+              disabled={loggingOut}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {loggingOut ? "Logging out…" : "Log out"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </motion.div>
   );
 };
