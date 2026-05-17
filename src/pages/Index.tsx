@@ -26,6 +26,7 @@ import { useGoalNotifications } from "@/hooks/useGoalNotifications";
 import { useMatchReminders } from "@/hooks/useMatchReminders";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useDepositCredits } from "@/hooks/useDepositCredits";
+import { useWithdrawalDebits } from "@/hooks/useWithdrawalDebits";
 
 type Screen = "onboarding" | "auth" | "dashboard";
 
@@ -85,6 +86,7 @@ const Index = () => {
   useGoalNotifications(pendingBets, liveForNotif);
   useMatchReminders(pendingBets);
   useDepositCredits();
+  useWithdrawalDebits();
   const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll } = useNotifications();
 
   const handleGetStarted = () => {
