@@ -37,7 +37,7 @@ const TeamLogo = ({ src, alt, size = "md", className = "" }: TeamLogoProps) => {
       className={`${sizeClasses[size]} rounded-full bg-secondary/50 flex items-center justify-center overflow-hidden ${className}`}
     >
       <img
-        src={src ?? undefined}
+        src={validSrc}
         alt={alt}
         className="w-[80%] h-[80%] object-contain"
         onError={() => setHasError(true)}
