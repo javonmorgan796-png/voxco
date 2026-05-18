@@ -17,8 +17,9 @@ const sizeClasses = {
 
 const TeamLogo = ({ src, alt, size = "md", className = "" }: TeamLogoProps) => {
   const [hasError, setHasError] = useState(false);
+  const validSrc = typeof src === "string" && src.trim().length > 0 ? src : null;
 
-  if (hasError) {
+  if (hasError || !validSrc) {
     // Fallback to first letter avatar
     return (
       <div
