@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { X, Copy, Check, TrendingUp, TrendingDown, RefreshCw, ArrowLeft, Upload, Loader2, FileImage, DollarSign, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
@@ -46,6 +46,13 @@ const CryptoDepositSheet = ({ onClose }: CryptoDepositSheetProps) => {
     [cryptoWallets, selectedSym],
   );
   const livePrice = selectedWallet ? prices[selectedWallet.crypto as CryptoSym] : undefined;
+
+  // Auto-pick first available wallet when current selection isn't available
+  useEffect(() => {
+    if (availableSyms.length > 0 && !availableSyms.includes(selectedSym)) {
+      setSelectedSym(availableSyms[0]);
+    }
+  }, [availableSyms, selectedSym]);
 
   const amountNum = parseFloat(amount) || 0;
   const cryptoAmount = livePrice && livePrice.usd > 0 ? amountNum / livePrice.usd : 0;
