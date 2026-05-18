@@ -75,7 +75,7 @@ const VIPSheet = ({ onClose, onOpenAdmin }: VIPSheetProps) => {
     if (stake > balance) { toast.error("Insufficient balance"); return; }
     if (new Date(p.kickoff).getTime() <= Date.now()) { toast.error("Match has already started"); return; }
     setSubmittingId(p.id);
-    const tx = placeBetDeduction(stake, `VIP ${p.section}: ${p.home_team} vs ${p.away_team}`);
+    const tx = await placeBetDeduction(stake, `VIP ${p.section}: ${p.home_team} vs ${p.away_team}`);
     if (!tx) { setSubmittingId(null); toast.error("Could not place bet"); return; }
     const { error } = await placeVipBet(p.id, stake, Number(p.odds));
     setSubmittingId(null);
