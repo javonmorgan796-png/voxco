@@ -47,6 +47,13 @@ const CryptoDepositSheet = ({ onClose }: CryptoDepositSheetProps) => {
   );
   const livePrice = selectedWallet ? prices[selectedWallet.crypto as CryptoSym] : undefined;
 
+  // Auto-pick first available wallet when current selection isn't available
+  useEffect(() => {
+    if (availableSyms.length > 0 && !availableSyms.includes(selectedSym)) {
+      setSelectedSym(availableSyms[0]);
+    }
+  }, [availableSyms, selectedSym]);
+
   const amountNum = parseFloat(amount) || 0;
   const cryptoAmount = livePrice && livePrice.usd > 0 ? amountNum / livePrice.usd : 0;
 
