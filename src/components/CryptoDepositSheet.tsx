@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { X, Copy, Check, TrendingUp, TrendingDown, RefreshCw, ArrowLeft, Upload, Loader2, FileImage, DollarSign, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
