@@ -1,29 +1,20 @@
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useWallet } from "./useWallet";
 import { useNotifications } from "./useNotifications";
 import { toast } from "sonner";
 
-const DEBITED_KEY = "debited_withdrawal_ids";
-
-const getDebited = (): string[] => {
-  try { return JSON.parse(localStorage.getItem(DEBITED_KEY) || "[]"); } catch { return []; }
-};
-const markDebited = (id: string) => {
-  const list = getDebited();
-  if (!list.includes(id)) {
-    list.push(id);
-    localStorage.setItem(DEBITED_KEY, JSON.stringify(list.slice(-200)));
-  }
+const SEEN_KEY = "seen_withdrawal_approvals";
+const getSeen = (): string[] => { try { return JSON.parse(localStorage.getItem(SEEN_KEY) || "[]"); } catch { return []; } };
+const markSeen = (id: string) => {
+  const list = getSeen();
+  if (!list.includes(id)) { list.push(id); localStorage.setItem(SEEN_KEY, JSON.stringify(list.slice(-200))); }
 };
 
 /**
- * Watches the user's withdrawal requests and debits the local wallet
- * whenever an admin-approved withdrawal hasn't yet been applied locally.
- * Mirrors useDepositCredits but for withdrawals.
+ * Balance is now debited by a DB trigger when an admin approves a withdrawal.
+ * This hook only surfaces a toast/notification once per approval.
  */
 export const useWithdrawalDebits = () => {
-  const { withdraw, balance } = useWallet();
   const { addNotification } = useNotifications();
 
   useEffect(() => {
@@ -39,19 +30,12 @@ export const useWithdrawalDebits = () => {
         .eq("status", "approved")
         .order("created_at", { ascending: true });
       if (cancelled || !data) return;
-      const debited = getDebited();
+      const seen = getSeen();
       data.forEach((row) => {
-        if (debited.includes(row.id)) return;
-        const amt = Number(row.amount_usd);
-        // Always mark as debited so we don't loop, even if balance is short.
-        const tx = withdraw(amt);
-        markDebited(row.id);
-        if (tx) {
-          addNotification("withdrawal", "Withdrawal approved ✅", `$${amt.toFixed(2)} (${row.crypto}) deducted from your wallet.`);
-          toast.success(`Withdrawal approved: -$${amt.toFixed(2)}`);
-        } else {
-          addNotification("withdrawal", "Withdrawal approved", `$${amt.toFixed(2)} (${row.crypto}) processed.`);
-        }
+        if (seen.includes(row.id)) return;
+        markSeen(row.id);
+        addNotification("withdrawal", "Withdrawal approved ✅", `$${Number(row.amount_usd).toFixed(2)} (${row.crypto}) deducted from your wallet.`);
+        toast.success(`Withdrawal approved: -$${Number(row.amount_usd).toFixed(2)}`);
       });
     };
 
