@@ -84,8 +84,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:site", content: "@Lovable" },
       { name: "twitter:title", content: "Bet smarter with Voxco — the modern sports betting platform" },
       { name: "twitter:description", content: "Voxco is built for bettors who play with confidence — combining innovation, speed, and elite sports entertainment in one powerful platform." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/7IDQoESSbXWzday1SV82ePSKOLy2/social-images/social-1779171255150-75106.webp" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/7IDQoESSbXWzday1SV82ePSKOLy2/social-images/social-1779171255150-75106.webp" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/7IDQoESSbXWzday1SV82ePSKOLy2/social-images/social-1779189629625-75117.webp" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/7IDQoESSbXWzday1SV82ePSKOLy2/social-images/social-1779189629625-75117.webp" },
     ],
     links: [
       {
