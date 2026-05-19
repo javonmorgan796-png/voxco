@@ -26,49 +26,13 @@ const CryptoDepositSheet = ({ onClose }: CryptoDepositSheetProps) => {
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [cryptoPricesError, setCryptoPricesError] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   
-  // Wrap hooks with error boundaries to prevent crashes from failing hooks
-  let prices = {};
-  let pricesLoading = true;
-  let addNotification = () => {};
-  let isSuspended = false;
-  let wallets: any[] = [];
-  let walletsLoading = true;
-  let refreshWallets = () => {};
-  
-  try {
-    const pricesHook = useCryptoPrices();
-    prices = pricesHook.prices || {};
-    pricesLoading = pricesHook.loading || true;
-  } catch (err) {
-    console.error("CryptoDepositSheet Error: useCryptoPrices failed", err);
-    setCryptoPricesError(true);
-  }
-  
-  try {
-    const notificationsHook = useNotifications();
-    addNotification = notificationsHook.addNotification || (() => {});
-  } catch (err) {
-    console.error("CryptoDepositSheet Error: useNotifications failed", err);
-  }
-  
-  try {
-    const suspensionHook = useSuspension();
-    isSuspended = suspensionHook.isSuspended || false;
-  } catch (err) {
-    console.error("CryptoDepositSheet Error: useSuspension failed", err);
-  }
-  
-  try {
-    const walletsHook = usePaymentWallets();
-    wallets = walletsHook.wallets || [];
-    walletsLoading = walletsHook.loading || true;
-    refreshWallets = walletsHook.refresh || (() => {});
-  } catch (err) {
-    console.error("CryptoDepositSheet Error: usePaymentWallets failed", err);
-  }
+  // Hooks must be called unconditionally at the top level
+  const { prices = {}, loading: pricesLoading = true } = useCryptoPrices() || {};
+  const { addNotification = () => {} } = useNotifications() || {};
+  const { isSuspended = false } = useSuspension() || {};
+  const { wallets = [], loading: walletsLoading = true, refresh: refreshWallets = () => {} } = usePaymentWallets() || {};
 
   // Clean up object URL on unmount or when receiptPreview changes
   useEffect(() => {
@@ -122,7 +86,8 @@ const CryptoDepositSheet = ({ onClose }: CryptoDepositSheetProps) => {
 
   const amountNum = (() => {
     try {
-      return parseFloat(amount) || 0;
+      const parsed = parseFloat(amount);
+      return isNaN(parsed) ? 0 : parsed;
     } catch {
       return 0;
     }
@@ -142,7 +107,6 @@ const CryptoDepositSheet = ({ onClose }: CryptoDepositSheetProps) => {
   const amountError = (() => {
     try {
       if (!amount) return null;
-      if (Number.isNaN(amountNum)) return "Enter a valid number";
       if (amountNum < 5) return "Minimum deposit is $5";
       if (amountNum > 100000) return "Maximum deposit is $100,000";
       if (!livePrice && !pricesLoading && pricesAvailable) return "Live price unavailable, please wait…";
