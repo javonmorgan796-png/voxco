@@ -220,6 +220,12 @@ const CryptoDepositSheet = ({ onClose }: CryptoDepositSheetProps) => {
 
             <div>
               <label className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground">Amount in USD</label>
+              {!pricesAvailable && !pricesLoading && availableSyms.length > 0 && (
+                <div className="mt-2 p-2.5 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-600 text-[11px] flex items-center gap-2">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  Live price feed unavailable. Please retry shortly.
+                </div>
+              )}
               <div className="relative mt-2">
                 <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <input
