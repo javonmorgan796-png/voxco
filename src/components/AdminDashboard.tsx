@@ -436,6 +436,56 @@ const AdminDashboard = ({ onClose }: AdminDashboardProps) => {
         )}
       </AnimatePresence>
 
+      <AnimatePresence>
+        {crediting && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
+            onClick={() => !creditSubmitting && setCrediting(null)}>
+            <motion.div initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
+              className="w-full max-w-sm rounded-2xl bg-background border border-border p-5 space-y-4 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}>
+              <div>
+                <h3 className="font-bold text-foreground text-lg">Adjust balance</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">{crediting.name}</p>
+              </div>
+              <div>
+                <label className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground">Amount (USD)</label>
+                <div className="relative mt-1.5">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input
+                    type="number" inputMode="decimal" autoFocus
+                    placeholder="100  (use - to debit)"
+                    value={creditAmount}
+                    onChange={(e) => setCreditAmount(e.target.value)}
+                    className="w-full pl-9 pr-3 py-3 rounded-lg bg-muted/40 border border-border text-foreground font-semibold focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  />
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1">Use a negative number to debit (e.g. -25).</p>
+              </div>
+              <div>
+                <label className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground">Note (optional)</label>
+                <input
+                  type="text" maxLength={200}
+                  placeholder="Reason for adjustment"
+                  value={creditNote}
+                  onChange={(e) => setCreditNote(e.target.value)}
+                  className="w-full mt-1.5 px-3 py-2.5 rounded-lg bg-muted/40 border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => setCrediting(null)} disabled={creditSubmitting}
+                  className="flex-1 py-2.5 rounded-lg bg-muted/40 text-foreground font-semibold text-sm">Cancel</button>
+                <button onClick={handleCreditUser} disabled={creditSubmitting || !creditAmount}
+                  className="flex-1 py-2.5 rounded-lg bg-primary text-primary-foreground font-bold text-sm flex items-center justify-center gap-1.5 disabled:opacity-50">
+                  {creditSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  Apply
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <EditRequestDialog
         open={!!editing}
         kind={editing?.kind || "deposit"}
