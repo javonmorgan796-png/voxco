@@ -84,8 +84,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:site", content: "@Lovable" },
       { name: "twitter:title", content: "Lovable App" },
       { name: "twitter:description", content: "Unzip It Simply extracts compressed zip files for easy access to their contents." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/49628c31-fab1-4348-8ba9-dc45c176c076/id-preview-b5a088b7--1d353298-3643-45da-a71f-a67a73e5531d.lovable.app-1778949408620.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/49628c31-fab1-4348-8ba9-dc45c176c076/id-preview-b5a088b7--1d353298-3643-45da-a71f-a67a73e5531d.lovable.app-1778949408620.png" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/7IDQoESSbXWzday1SV82ePSKOLy2/social-images/social-1779171255150-75106.webp" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/7IDQoESSbXWzday1SV82ePSKOLy2/social-images/social-1779171255150-75106.webp" },
     ],
     links: [
       {
