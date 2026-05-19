@@ -1,10 +1,11 @@
 import { useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Users, ArrowDownLeft, ArrowUpRight, Crown, ShieldCheck, ShieldAlert, Loader2, Check, XCircle, Ban, RotateCcw, Pencil, Landmark, ScrollText, Image as ImageIcon, Wallet as WalletIcon, Plus, Trash2, Upload, Save } from "lucide-react";
+import { X, Users, ArrowDownLeft, ArrowUpRight, Crown, ShieldCheck, ShieldAlert, Loader2, Check, XCircle, Ban, RotateCcw, Pencil, Landmark, ScrollText, Image as ImageIcon, Wallet as WalletIcon, Plus, Trash2, Upload, Save, DollarSign } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useAdminData, RequestStatus, VipBetStatus, DepositRow, WithdrawalRow } from "@/hooks/useAdminData";
 import { usePaymentWallets, PaymentWallet, CryptoKind } from "@/hooks/usePaymentWallets";
 import EditRequestDialog from "./EditRequestDialog";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface AdminDashboardProps {
@@ -40,6 +41,30 @@ const AdminDashboard = ({ onClose }: AdminDashboardProps) => {
   const [depositFilter, setDepositFilter] = useState<DepositFilter>("pending");
   const [rejecting, setRejecting] = useState<{ kind: "dep" | "wd"; id: string } | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [crediting, setCrediting] = useState<{ id: string; name: string } | null>(null);
+  const [creditAmount, setCreditAmount] = useState("");
+  const [creditNote, setCreditNote] = useState("");
+  const [creditSubmitting, setCreditSubmitting] = useState(false);
+
+  const handleCreditUser = async () => {
+    if (!crediting) return;
+    const amt = parseFloat(creditAmount);
+    if (!Number.isFinite(amt) || amt === 0) { toast.error("Enter a non-zero amount"); return; }
+    if (Math.abs(amt) > 1_000_000) { toast.error("Amount too large"); return; }
+    setCreditSubmitting(true);
+    try {
+      const { data, error } = await supabase.rpc("admin_credit_user" as never, {
+        _user_id: crediting.id, _amount: amt, _note: creditNote || undefined,
+      } as never);
+      if (error) throw error;
+      toast.success(`${amt > 0 ? "Credited" : "Debited"} $${Math.abs(amt).toFixed(2)} · new balance $${Number(data).toFixed(2)}`);
+      setCrediting(null); setCreditAmount(""); setCreditNote("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to credit user");
+    } finally {
+      setCreditSubmitting(false);
+    }
+  };
 
   const filteredDeposits = useMemo(() => {
     return deposits.filter((d) => {
@@ -174,21 +199,29 @@ const AdminDashboard = ({ onClose }: AdminDashboardProps) => {
         ) : (
           <>
             {tab === "users" && users.map((u) => (
-              <div key={u.id} className="glass-card p-3 flex items-center justify-between">
-                <div className="min-w-0">
+              <div key={u.id} className="glass-card p-3 flex items-center justify-between gap-2">
+                <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold text-foreground truncate">{u.display_name || u.username || "User"}</p>
                   <p className="text-xs text-muted-foreground truncate">@{u.username || "—"} · joined {new Date(u.created_at).toLocaleDateString()}</p>
                   {u.is_suspended && <span className="text-[10px] font-bold text-destructive uppercase">Suspended</span>}
                 </div>
-                {u.is_suspended ? (
-                  <button onClick={() => handleSuspend(u.id, false)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 text-xs font-bold">
-                    <RotateCcw className="w-3.5 h-3.5" /> Reinstate
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    onClick={() => { setCrediting({ id: u.id, name: u.display_name || u.username || "User" }); setCreditAmount(""); setCreditNote(""); }}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary/20 text-primary text-xs font-bold hover:bg-primary/30"
+                  >
+                    <DollarSign className="w-3.5 h-3.5" /> Credit
                   </button>
-                ) : (
-                  <button onClick={() => handleSuspend(u.id, true)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-destructive/20 text-destructive text-xs font-bold">
-                    <Ban className="w-3.5 h-3.5" /> Suspend
-                  </button>
-                )}
+                  {u.is_suspended ? (
+                    <button onClick={() => handleSuspend(u.id, false)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 text-xs font-bold">
+                      <RotateCcw className="w-3.5 h-3.5" /> Reinstate
+                    </button>
+                  ) : (
+                    <button onClick={() => handleSuspend(u.id, true)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-destructive/20 text-destructive text-xs font-bold">
+                      <Ban className="w-3.5 h-3.5" /> Suspend
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
 
@@ -396,6 +429,56 @@ const AdminDashboard = ({ onClose }: AdminDashboardProps) => {
                 <button onClick={() => setRejecting(null)} className="flex-1 py-2.5 rounded-lg bg-muted/40 text-foreground font-semibold text-sm">Cancel</button>
                 <button onClick={submitReject} className="flex-1 py-2.5 rounded-lg bg-destructive text-destructive-foreground font-bold text-sm">
                   Confirm reject
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {crediting && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
+            onClick={() => !creditSubmitting && setCrediting(null)}>
+            <motion.div initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
+              className="w-full max-w-sm rounded-2xl bg-background border border-border p-5 space-y-4 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}>
+              <div>
+                <h3 className="font-bold text-foreground text-lg">Adjust balance</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">{crediting.name}</p>
+              </div>
+              <div>
+                <label className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground">Amount (USD)</label>
+                <div className="relative mt-1.5">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input
+                    type="number" inputMode="decimal" autoFocus
+                    placeholder="100  (use - to debit)"
+                    value={creditAmount}
+                    onChange={(e) => setCreditAmount(e.target.value)}
+                    className="w-full pl-9 pr-3 py-3 rounded-lg bg-muted/40 border border-border text-foreground font-semibold focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  />
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1">Use a negative number to debit (e.g. -25).</p>
+              </div>
+              <div>
+                <label className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground">Note (optional)</label>
+                <input
+                  type="text" maxLength={200}
+                  placeholder="Reason for adjustment"
+                  value={creditNote}
+                  onChange={(e) => setCreditNote(e.target.value)}
+                  className="w-full mt-1.5 px-3 py-2.5 rounded-lg bg-muted/40 border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => setCrediting(null)} disabled={creditSubmitting}
+                  className="flex-1 py-2.5 rounded-lg bg-muted/40 text-foreground font-semibold text-sm">Cancel</button>
+                <button onClick={handleCreditUser} disabled={creditSubmitting || !creditAmount}
+                  className="flex-1 py-2.5 rounded-lg bg-primary text-primary-foreground font-bold text-sm flex items-center justify-center gap-1.5 disabled:opacity-50">
+                  {creditSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  Apply
                 </button>
               </div>
             </motion.div>

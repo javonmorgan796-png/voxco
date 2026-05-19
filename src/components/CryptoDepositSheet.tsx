@@ -28,9 +28,10 @@ const CryptoDepositSheet = ({ onClose }: CryptoDepositSheetProps) => {
   const [submitting, setSubmitting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const { prices, loading: pricesLoading } = useCryptoPrices();
-  const { wallets, loading: walletsLoading } = usePaymentWallets();
+  const { wallets, loading: walletsLoading, refresh: refreshWallets } = usePaymentWallets();
   const { addNotification } = useNotifications();
   const { isSuspended } = useSuspension();
+  const pricesAvailable = Object.keys(prices).length > 0;
 
   // Filter to crypto wallets only (exclude BANK), then unique active ones
   const cryptoWallets = useMemo(
@@ -165,8 +166,17 @@ const CryptoDepositSheet = ({ onClose }: CryptoDepositSheetProps) => {
               {walletsLoading ? (
                 <div className="mt-2 flex items-center justify-center py-6"><Loader2 className="w-5 h-5 text-primary animate-spin" /></div>
               ) : availableSyms.length === 0 ? (
-                <div className="mt-2 p-4 rounded-xl bg-destructive/10 text-destructive text-sm flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4" /> No deposit wallets configured. Please contact admin.
+                <div className="mt-2 p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm space-y-2">
+                  <div className="flex items-center gap-2 font-semibold">
+                    <AlertCircle className="w-4 h-4" /> No deposit wallets available
+                  </div>
+                  <p className="text-xs text-destructive/80">Wallets may still be loading or an admin hasn't configured any yet.</p>
+                  <button
+                    onClick={() => { refreshWallets(); toast.message("Refreshing wallets…"); }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive/20 text-destructive text-xs font-bold hover:bg-destructive/30"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" /> Retry
+                  </button>
                 </div>
               ) : (
                 <div className="grid grid-cols-3 gap-3 mt-2">
@@ -210,6 +220,12 @@ const CryptoDepositSheet = ({ onClose }: CryptoDepositSheetProps) => {
 
             <div>
               <label className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground">Amount in USD</label>
+              {!pricesAvailable && !pricesLoading && availableSyms.length > 0 && (
+                <div className="mt-2 p-2.5 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-600 text-[11px] flex items-center gap-2">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  Live price feed unavailable. Please retry shortly.
+                </div>
+              )}
               <div className="relative mt-2">
                 <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <input
