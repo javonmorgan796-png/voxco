@@ -79,6 +79,9 @@ const OnboardingScreen = ({ onGetStarted, onSignIn, onSignUp }: OnboardingScreen
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
           className="absolute inset-0"
+          style={{
+            backgroundImage: `linear-gradient(135deg, hsl(var(--background)), hsl(var(--muted)))`,
+          }}
         >
           <img
             src={slide.image}
@@ -86,6 +89,11 @@ const OnboardingScreen = ({ onGetStarted, onSignIn, onSignUp }: OnboardingScreen
             className="h-full w-full object-cover object-top"
             width={1080}
             height={1920}
+            loading="eager"
+            decoding="async"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).style.display = "none";
+            }}
           />
           <div
             className="absolute inset-0"
