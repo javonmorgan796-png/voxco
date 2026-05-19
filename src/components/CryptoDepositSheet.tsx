@@ -166,8 +166,17 @@ const CryptoDepositSheet = ({ onClose }: CryptoDepositSheetProps) => {
               {walletsLoading ? (
                 <div className="mt-2 flex items-center justify-center py-6"><Loader2 className="w-5 h-5 text-primary animate-spin" /></div>
               ) : availableSyms.length === 0 ? (
-                <div className="mt-2 p-4 rounded-xl bg-destructive/10 text-destructive text-sm flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4" /> No deposit wallets configured. Please contact admin.
+                <div className="mt-2 p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm space-y-2">
+                  <div className="flex items-center gap-2 font-semibold">
+                    <AlertCircle className="w-4 h-4" /> No deposit wallets available
+                  </div>
+                  <p className="text-xs text-destructive/80">Wallets may still be loading or an admin hasn't configured any yet.</p>
+                  <button
+                    onClick={() => { refreshWallets(); toast.message("Refreshing wallets…"); }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive/20 text-destructive text-xs font-bold hover:bg-destructive/30"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" /> Retry
+                  </button>
                 </div>
               ) : (
                 <div className="grid grid-cols-3 gap-3 mt-2">
