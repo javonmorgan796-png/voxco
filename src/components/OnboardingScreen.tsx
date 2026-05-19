@@ -1,10 +1,15 @@
 import { useState } from "react";
 import { ArrowRight, ChevronRight, ChevronLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import heroSlide1 from "@/assets/hero-onboarding.jpg?url";
-import heroSlide2 from "@/assets/hero-slide2.jpg?url";
-import heroSlide3 from "@/assets/hero-slide3.jpg?url";
-import betnaroLogo from "@/assets/betnaro-logo.png?url";
+//import heroSlide1 from "@/assets/hero-onboarding.jpg?url";
+//import heroSlide2 from "@/assets/hero-slide2.jpg?url";
+//import heroSlide3 from "@/assets/hero-slide3.jpg?url";
+//import betnaroLogo from "@/assets/betnaro-logo.png?url";
+
+import heroSlide1 from "@/assets/hero-onboarding.jpg";
+import heroSlide2 from "@/assets/hero-slide2.jpg";
+import heroSlide3 from "@/assets/hero-slide3.jpg";
+import betnaroLogo from "@/assets/betnaro-logo.png";
 
 interface OnboardingScreenProps {
   onGetStarted: () => void;
