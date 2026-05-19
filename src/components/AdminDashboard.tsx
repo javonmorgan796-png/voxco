@@ -53,9 +53,9 @@ const AdminDashboard = ({ onClose }: AdminDashboardProps) => {
     if (Math.abs(amt) > 1_000_000) { toast.error("Amount too large"); return; }
     setCreditSubmitting(true);
     try {
-      const { data, error } = await supabase.rpc("admin_credit_user", {
-        _user_id: crediting.id, _amount: amt, _note: creditNote || null,
-      });
+      const { data, error } = await supabase.rpc("admin_credit_user" as never, {
+        _user_id: crediting.id, _amount: amt, _note: creditNote || undefined,
+      } as never);
       if (error) throw error;
       toast.success(`${amt > 0 ? "Credited" : "Debited"} $${Math.abs(amt).toFixed(2)} · new balance $${Number(data).toFixed(2)}`);
       setCrediting(null); setCreditAmount(""); setCreditNote("");
