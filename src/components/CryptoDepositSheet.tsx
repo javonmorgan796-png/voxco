@@ -28,9 +28,10 @@ const CryptoDepositSheet = ({ onClose }: CryptoDepositSheetProps) => {
   const [submitting, setSubmitting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const { prices, loading: pricesLoading } = useCryptoPrices();
-  const { wallets, loading: walletsLoading } = usePaymentWallets();
+  const { wallets, loading: walletsLoading, refresh: refreshWallets } = usePaymentWallets();
   const { addNotification } = useNotifications();
   const { isSuspended } = useSuspension();
+  const pricesAvailable = Object.keys(prices).length > 0;
 
   // Filter to crypto wallets only (exclude BANK), then unique active ones
   const cryptoWallets = useMemo(
