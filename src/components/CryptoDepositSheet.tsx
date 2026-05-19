@@ -26,100 +26,317 @@ const CryptoDepositSheet = ({ onClose }: CryptoDepositSheetProps) => {
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [cryptoPricesError, setCryptoPricesError] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  const { prices, loading: pricesLoading } = useCryptoPrices();
-  const { wallets, loading: walletsLoading, refresh: refreshWallets } = usePaymentWallets();
-  const { addNotification } = useNotifications();
-  const { isSuspended } = useSuspension();
-  const pricesAvailable = Object.keys(prices).length > 0;
+  
+  // Wrap hooks with error boundaries to prevent crashes from failing hooks
+  let prices = {};
+  let pricesLoading = true;
+  let addNotification = () => {};
+  let isSuspended = false;
+  let wallets: any[] = [];
+  let walletsLoading = true;
+  let refreshWallets = () => {};
+  
+  try {
+    const pricesHook = useCryptoPrices();
+    prices = pricesHook.prices || {};
+    pricesLoading = pricesHook.loading || true;
+  } catch (err) {
+    console.error("CryptoDepositSheet Error: useCryptoPrices failed", err);
+    setCryptoPricesError(true);
+  }
+  
+  try {
+    const notificationsHook = useNotifications();
+    addNotification = notificationsHook.addNotification || (() => {});
+  } catch (err) {
+    console.error("CryptoDepositSheet Error: useNotifications failed", err);
+  }
+  
+  try {
+    const suspensionHook = useSuspension();
+    isSuspended = suspensionHook.isSuspended || false;
+  } catch (err) {
+    console.error("CryptoDepositSheet Error: useSuspension failed", err);
+  }
+  
+  try {
+    const walletsHook = usePaymentWallets();
+    wallets = walletsHook.wallets || [];
+    walletsLoading = walletsHook.loading || true;
+    refreshWallets = walletsHook.refresh || (() => {});
+  } catch (err) {
+    console.error("CryptoDepositSheet Error: usePaymentWallets failed", err);
+  }
+
+  // Clean up object URL on unmount or when receiptPreview changes
+  useEffect(() => {
+    return () => {
+      if (receiptPreview) {
+        try {
+          URL.revokeObjectURL(receiptPreview);
+        } catch (err) {
+          console.error("CryptoDepositSheet Error: URL.revokeObjectURL failed", err);
+        }
+      }
+    };
+  }, [receiptPreview]);
 
   // Filter to crypto wallets only (exclude BANK), then unique active ones
   const cryptoWallets = useMemo(
-    () => wallets.filter((w) => w.crypto !== "BANK" && w.is_active),
+    () => (wallets || []).filter((w) => w?.crypto !== "BANK" && w?.is_active === true),
     [wallets],
   );
+  
   const availableSyms = useMemo(
-    () => Array.from(new Set(cryptoWallets.map((w) => w.crypto))) as CryptoSym[],
+    () => {
+      const syms = (cryptoWallets || []).map((w) => w?.crypto).filter(Boolean);
+      return Array.from(new Set(syms)) as CryptoSym[];
+    },
     [cryptoWallets],
   );
+  
   const selectedWallet = useMemo(
-    () => cryptoWallets.find((w) => w.crypto === selectedSym) || cryptoWallets[0],
+    () => {
+      const found = (cryptoWallets || []).find((w) => w?.crypto === selectedSym);
+      return found || (cryptoWallets?.[0] || null);
+    },
     [cryptoWallets, selectedSym],
   );
-  const livePrice = selectedWallet ? prices[selectedWallet.crypto as CryptoSym] : undefined;
+  
+  const pricesAvailable = Object.keys(prices || {}).length > 0;
+  
+  const livePrice = selectedWallet?.crypto ? (prices as any)[selectedWallet.crypto as CryptoSym] : undefined;
 
   // Auto-pick first available wallet when current selection isn't available
   useEffect(() => {
-    if (availableSyms.length > 0 && !availableSyms.includes(selectedSym)) {
-      setSelectedSym(availableSyms[0]);
+    try {
+      if (availableSyms.length > 0 && !availableSyms.includes(selectedSym)) {
+        setSelectedSym(availableSyms[0]);
+      }
+    } catch (err) {
+      console.error("CryptoDepositSheet Error: auto-pick wallet failed", err);
     }
   }, [availableSyms, selectedSym]);
 
-  const amountNum = parseFloat(amount) || 0;
-  const cryptoAmount = livePrice && livePrice.usd > 0 ? amountNum / livePrice.usd : 0;
-
-  const amountError = (() => {
-    if (!amount) return null;
-    if (Number.isNaN(amountNum)) return "Enter a valid number";
-    if (amountNum < 5) return "Minimum deposit is $5";
-    if (amountNum > 100000) return "Maximum deposit is $100,000";
-    if (!livePrice) return "Live price unavailable, please wait…";
-    return null;
+  const amountNum = (() => {
+    try {
+      return parseFloat(amount) || 0;
+    } catch {
+      return 0;
+    }
+  })();
+  
+  const cryptoAmount = (() => {
+    try {
+      if (livePrice?.usd && livePrice.usd > 0 && amountNum > 0) {
+        return amountNum / livePrice.usd;
+      }
+      return 0;
+    } catch {
+      return 0;
+    }
   })();
 
-  const handleCopy = () => {
-    if (!selectedWallet) return;
-    navigator.clipboard.writeText(selectedWallet.address);
-    setCopied(true);
-    toast.success(`${selectedWallet.crypto} address copied!`);
-    setTimeout(() => setCopied(false), 2000);
+  const amountError = (() => {
+    try {
+      if (!amount) return null;
+      if (Number.isNaN(amountNum)) return "Enter a valid number";
+      if (amountNum < 5) return "Minimum deposit is $5";
+      if (amountNum > 100000) return "Maximum deposit is $100,000";
+      if (!livePrice && !pricesLoading && pricesAvailable) return "Live price unavailable, please wait…";
+      return null;
+    } catch {
+      return "Error validating amount";
+    }
+  })();
+
+  const handleCopy = async () => {
+    if (!selectedWallet?.address) {
+      toast.error("No wallet address available");
+      return;
+    }
+    
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(selectedWallet.address);
+      } else {
+        // Fallback for mobile browsers without clipboard API
+        const textArea = document.createElement("textarea");
+        textArea.value = selectedWallet.address;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+      }
+      setCopied(true);
+      toast.success(`${selectedWallet?.crypto || "Wallet"} address copied!`);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("CryptoDepositSheet Error: clipboard copy failed", err);
+      toast.error("Failed to copy address. Please copy manually.");
+    }
   };
 
   const handleProceed = () => {
-    if (isSuspended) { toast.error("Account suspended"); return; }
-    if (!amountNum || amountNum < 5) { toast.error("Minimum deposit is $5"); return; }
-    if (amountError) { toast.error(amountError); return; }
-    if (!confirmedCrypto) { toast.error("Confirm the crypto amount you'll send"); return; }
-    if (!selectedWallet) { toast.error("No wallet available — contact support"); return; }
-    setStep("pay");
+    try {
+      if (isSuspended) { 
+        toast.error("Account suspended"); 
+        return; 
+      }
+      if (!amountNum || amountNum < 5) { 
+        toast.error("Minimum deposit is $5"); 
+        return; 
+      }
+      if (amountError) { 
+        toast.error(amountError); 
+        return; 
+      }
+      if (!confirmedCrypto) { 
+        toast.error("Confirm the crypto amount you'll send"); 
+        return; 
+      }
+      if (!selectedWallet?.address) { 
+        toast.error("No wallet available — contact support"); 
+        return; 
+      }
+      setStep("pay");
+    } catch (err) {
+      console.error("CryptoDepositSheet Error: handleProceed failed", err);
+      toast.error("Failed to proceed. Please try again.");
+    }
   };
 
   const handlePickFile = (f: File | null) => {
-    if (!f) return;
-    if (f.size > 5 * 1024 * 1024) { toast.error("File too large (max 5MB)"); return; }
-    setReceiptFile(f);
-    setReceiptPreview(URL.createObjectURL(f));
+    try {
+      if (!f) return;
+      if (f.size > 5 * 1024 * 1024) { 
+        toast.error("File too large (max 5MB)"); 
+        return; 
+      }
+      setReceiptFile(f);
+      const previewUrl = URL.createObjectURL(f);
+      setReceiptPreview(previewUrl);
+    } catch (err) {
+      console.error("CryptoDepositSheet Error: handlePickFile failed", err);
+      toast.error("Failed to process receipt file");
+    }
   };
 
   const handleSubmit = async () => {
-    if (!receiptFile) { toast.error("Please upload a payment receipt"); return; }
-    if (!selectedWallet) { toast.error("No wallet available"); return; }
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) { toast.error("Sign in required"); return; }
+    if (!receiptFile) { 
+      toast.error("Please upload a payment receipt"); 
+      return; 
+    }
+    if (!selectedWallet?.address) { 
+      toast.error("No wallet available"); 
+      return; 
+    }
+    
     setSubmitting(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) { 
+        toast.error("Sign in required"); 
+        return; 
+      }
+      
       const ext = receiptFile.name.split(".").pop()?.toLowerCase() || "jpg";
       const path = `${session.user.id}/${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("receipts").upload(path, receiptFile, { upsert: false, contentType: receiptFile.type });
+      
+      const { error: upErr } = await supabase.storage
+        .from("receipts")
+        .upload(path, receiptFile, { 
+          upsert: false, 
+          contentType: receiptFile.type 
+        });
+      
       if (upErr) throw upErr;
-      const { error: insErr } = await supabase.from("deposit_requests").insert({
-        user_id: session.user.id,
-        amount_usd: amountNum,
-        crypto: selectedWallet.crypto,
-        receipt_url: path,
-        note: `${cryptoAmount.toFixed(selectedWallet.crypto === "USDT" ? 2 : 8)} ${selectedWallet.crypto} → ${selectedWallet.address}`,
-      });
+      
+      const { error: insErr } = await supabase
+        .from("deposit_requests")
+        .insert({
+          user_id: session.user.id,
+          amount_usd: amountNum,
+          crypto: selectedWallet.crypto || "UNKNOWN",
+          receipt_url: path,
+          note: `${cryptoAmount.toFixed(selectedWallet?.crypto === "USDT" ? 2 : 8)} ${selectedWallet?.crypto || ""} → ${selectedWallet.address}`,
+        });
+      
       if (insErr) throw insErr;
-      addNotification("deposit", "Deposit submitted", `$${amountNum.toFixed(2)} (${selectedWallet.crypto}) — receipt uploaded, pending admin approval.`);
+      
+      try {
+        addNotification(
+          "deposit", 
+          "Deposit submitted", 
+          `$${amountNum.toFixed(2)} (${selectedWallet?.crypto || ""}) — receipt uploaded, pending admin approval.`
+        );
+      } catch (notifErr) {
+        console.error("CryptoDepositSheet Error: addNotification failed", notifErr);
+      }
+      
       toast.success("Deposit submitted for approval");
-      mongoSync("deposit_requested", { amount_usd: amountNum, crypto: selectedWallet.crypto, has_receipt: true });
+      
+      // Safe mongoSync with try/catch to prevent crashes
+      try {
+        await mongoSync("deposit_requested", { 
+          amount_usd: amountNum, 
+          crypto: selectedWallet.crypto, 
+          has_receipt: true 
+        });
+      } catch (mongoErr) {
+        console.error("CryptoDepositSheet Error: mongoSync failed", mongoErr);
+        // Don't fail the deposit if mongo sync fails
+      }
+      
       onClose();
     } catch (e) {
+      console.error("CryptoDepositSheet Error: handleSubmit failed", e);
       toast.error(e instanceof Error ? e.message : "Submission failed");
     } finally {
       setSubmitting(false);
     }
   };
+
+  // Fallback UI for when wallets fail to load
+  if (!walletsLoading && cryptoWallets.length === 0 && availableSyms.length === 0) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: "100%" }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: "100%" }}
+        transition={{ type: "spring", damping: 25, stiffness: 300 }}
+        className="fixed inset-0 z-[60] bg-background flex flex-col"
+      >
+        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-lg border-b border-border/50 p-4">
+          <div className="flex items-center justify-between">
+            <button onClick={onClose} className="w-10 h-10 rounded-full bg-muted/50 flex items-center justify-center">
+              <X className="w-5 h-5 text-foreground" />
+            </button>
+            <h1 className="font-bold text-lg text-foreground">Crypto Deposit</h1>
+            <div className="w-10" />
+          </div>
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center p-4 space-y-4 text-center">
+          <AlertCircle className="w-12 h-12 text-destructive" />
+          <h2 className="text-lg font-bold text-foreground">No wallets available</h2>
+          <p className="text-sm text-muted-foreground">
+            No deposit wallets have been configured yet. Please try again later or contact support.
+          </p>
+          <button
+            onClick={() => { refreshWallets(); toast.message("Refreshing wallets…"); }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground font-bold"
+          >
+            <RefreshCw className="w-4 h-4" /> Retry
+          </button>
+          <button onClick={onClose} className="text-sm text-muted-foreground underline">
+            Close
+          </button>
+        </div>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
@@ -181,8 +398,8 @@ const CryptoDepositSheet = ({ onClose }: CryptoDepositSheetProps) => {
               ) : (
                 <div className="grid grid-cols-3 gap-3 mt-2">
                   {availableSyms.map((sym) => {
-                    const wallet = cryptoWallets.find((w) => w.crypto === sym);
-                    const p = prices[sym];
+                    const wallet = (cryptoWallets || []).find((w) => w?.crypto === sym);
+                    const p = (prices as any)[sym];
                     const change = p?.change24h ?? 0;
                     const positive = change >= 0;
                     const active = selectedSym === sym;
@@ -260,10 +477,10 @@ const CryptoDepositSheet = ({ onClose }: CryptoDepositSheetProps) => {
                     <div className="text-xs text-muted-foreground">You will pay exactly</div>
                     <div className="text-right">
                       <div className="text-base font-bold text-primary">
-                        {cryptoAmount.toFixed(selectedWallet.crypto === "USDT" ? 2 : 8)} {selectedWallet.crypto}
+                        {cryptoAmount.toFixed(selectedWallet?.crypto === "USDT" ? 2 : 8)} {selectedWallet?.crypto || ""}
                       </div>
                       <div className="text-[10px] text-muted-foreground">
-                        @ ${livePrice.usd.toLocaleString(undefined, { maximumFractionDigits: 2 })} / {selectedWallet.crypto}
+                        @ ${livePrice.usd.toLocaleString(undefined, { maximumFractionDigits: 2 })} / {selectedWallet?.crypto || ""}
                       </div>
                     </div>
                   </div>
@@ -276,7 +493,7 @@ const CryptoDepositSheet = ({ onClose }: CryptoDepositSheetProps) => {
                     />
                     <span className="text-[11px] text-foreground">
                       I confirm I will send exactly{" "}
-                      <strong>{cryptoAmount.toFixed(selectedWallet.crypto === "USDT" ? 2 : 8)} {selectedWallet.crypto}</strong>{" "}
+                      <strong>{cryptoAmount.toFixed(selectedWallet?.crypto === "USDT" ? 2 : 8)} {selectedWallet?.crypto || ""}</strong>{" "}
                       (≈ ${amountNum.toFixed(2)}) at the current rate.
                     </span>
                   </label>
@@ -311,7 +528,7 @@ const CryptoDepositSheet = ({ onClose }: CryptoDepositSheetProps) => {
               <div className="text-right">
                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Send exactly</div>
                 <div className="text-sm font-bold text-primary">
-                  {cryptoAmount.toFixed((selectedWallet?.crypto === "USDT") ? 2 : 8)} {selectedWallet?.crypto}
+                  {cryptoAmount.toFixed(selectedWallet?.crypto === "USDT" ? 2 : 8)} {selectedWallet?.crypto || ""}
                 </div>
               </div>
             </div>
@@ -321,24 +538,30 @@ const CryptoDepositSheet = ({ onClose }: CryptoDepositSheetProps) => {
                 <div className="bg-white p-4 rounded-2xl shadow-lg">
                   {selectedWallet.qr_url ? (
                     <img src={selectedWallet.qr_url} alt="Wallet QR" className="w-[180px] h-[180px] object-contain" />
-                  ) : (
+                  ) : selectedWallet.address ? (
                     <QRCodeSVG value={selectedWallet.address} size={180} bgColor="#ffffff" fgColor="#000000" level="H" />
+                  ) : (
+                    <div className="w-[180px] h-[180px] bg-muted rounded-lg flex items-center justify-center">
+                      <AlertCircle className="w-8 h-8 text-muted-foreground" />
+                    </div>
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground text-center">
-                  Scan to pay <strong className="text-foreground">{selectedWallet.crypto}</strong> · {selectedWallet.network}
+                  Scan to pay <strong className="text-foreground">{selectedWallet.crypto || ""}</strong> · {selectedWallet.network || ""}
                 </p>
               </div>
             )}
 
             {selectedWallet && (
               <div className="space-y-1.5">
-                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{selectedWallet.label} address</p>
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{selectedWallet.label || selectedWallet.crypto || "Wallet"} address</p>
                 <div className="flex items-center gap-2 bg-muted/50 border border-border rounded-xl p-3">
-                  <p className="flex-1 text-xs font-mono text-foreground break-all leading-relaxed">{selectedWallet.address}</p>
-                  <button onClick={handleCopy} className="shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors">
-                    {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4 text-primary" />}
-                  </button>
+                  <p className="flex-1 text-xs font-mono text-foreground break-all leading-relaxed">{selectedWallet.address || "Address not available"}</p>
+                  {selectedWallet.address && (
+                    <button onClick={handleCopy} className="shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors">
+                      {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4 text-primary" />}
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -393,8 +616,8 @@ const CryptoDepositSheet = ({ onClose }: CryptoDepositSheetProps) => {
               <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 space-y-1">
                 <p className="text-xs font-semibold text-yellow-600">⚠️ Important</p>
                 <ul className="text-[11px] text-muted-foreground space-y-0.5">
-                  <li>• Send exactly <strong className="text-foreground">{cryptoAmount.toFixed(selectedWallet.crypto === "USDT" ? 2 : 8)} {selectedWallet.crypto}</strong></li>
-                  <li>• Only send {selectedWallet.crypto} on the {selectedWallet.network}</li>
+                  <li>• Send exactly <strong className="text-foreground">{cryptoAmount.toFixed(selectedWallet?.crypto === "USDT" ? 2 : 8)} {selectedWallet?.crypto || ""}</strong></li>
+                  <li>• Only send {selectedWallet?.crypto || ""} on the {selectedWallet?.network || "correct network"}</li>
                   <li>• Your balance will be credited after admin approval</li>
                 </ul>
               </div>
