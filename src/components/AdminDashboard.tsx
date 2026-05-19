@@ -1,10 +1,11 @@
 import { useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Users, ArrowDownLeft, ArrowUpRight, Crown, ShieldCheck, ShieldAlert, Loader2, Check, XCircle, Ban, RotateCcw, Pencil, Landmark, ScrollText, Image as ImageIcon, Wallet as WalletIcon, Plus, Trash2, Upload, Save } from "lucide-react";
+import { X, Users, ArrowDownLeft, ArrowUpRight, Crown, ShieldCheck, ShieldAlert, Loader2, Check, XCircle, Ban, RotateCcw, Pencil, Landmark, ScrollText, Image as ImageIcon, Wallet as WalletIcon, Plus, Trash2, Upload, Save, DollarSign } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useAdminData, RequestStatus, VipBetStatus, DepositRow, WithdrawalRow } from "@/hooks/useAdminData";
 import { usePaymentWallets, PaymentWallet, CryptoKind } from "@/hooks/usePaymentWallets";
 import EditRequestDialog from "./EditRequestDialog";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface AdminDashboardProps {
