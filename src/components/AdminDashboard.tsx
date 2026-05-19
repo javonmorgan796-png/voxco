@@ -199,21 +199,29 @@ const AdminDashboard = ({ onClose }: AdminDashboardProps) => {
         ) : (
           <>
             {tab === "users" && users.map((u) => (
-              <div key={u.id} className="glass-card p-3 flex items-center justify-between">
-                <div className="min-w-0">
+              <div key={u.id} className="glass-card p-3 flex items-center justify-between gap-2">
+                <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold text-foreground truncate">{u.display_name || u.username || "User"}</p>
                   <p className="text-xs text-muted-foreground truncate">@{u.username || "—"} · joined {new Date(u.created_at).toLocaleDateString()}</p>
                   {u.is_suspended && <span className="text-[10px] font-bold text-destructive uppercase">Suspended</span>}
                 </div>
-                {u.is_suspended ? (
-                  <button onClick={() => handleSuspend(u.id, false)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 text-xs font-bold">
-                    <RotateCcw className="w-3.5 h-3.5" /> Reinstate
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    onClick={() => { setCrediting({ id: u.id, name: u.display_name || u.username || "User" }); setCreditAmount(""); setCreditNote(""); }}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary/20 text-primary text-xs font-bold hover:bg-primary/30"
+                  >
+                    <DollarSign className="w-3.5 h-3.5" /> Credit
                   </button>
-                ) : (
-                  <button onClick={() => handleSuspend(u.id, true)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-destructive/20 text-destructive text-xs font-bold">
-                    <Ban className="w-3.5 h-3.5" /> Suspend
-                  </button>
-                )}
+                  {u.is_suspended ? (
+                    <button onClick={() => handleSuspend(u.id, false)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 text-xs font-bold">
+                      <RotateCcw className="w-3.5 h-3.5" /> Reinstate
+                    </button>
+                  ) : (
+                    <button onClick={() => handleSuspend(u.id, true)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-destructive/20 text-destructive text-xs font-bold">
+                      <Ban className="w-3.5 h-3.5" /> Suspend
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
 
