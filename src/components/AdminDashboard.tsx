@@ -41,6 +41,30 @@ const AdminDashboard = ({ onClose }: AdminDashboardProps) => {
   const [depositFilter, setDepositFilter] = useState<DepositFilter>("pending");
   const [rejecting, setRejecting] = useState<{ kind: "dep" | "wd"; id: string } | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [crediting, setCrediting] = useState<{ id: string; name: string } | null>(null);
+  const [creditAmount, setCreditAmount] = useState("");
+  const [creditNote, setCreditNote] = useState("");
+  const [creditSubmitting, setCreditSubmitting] = useState(false);
+
+  const handleCreditUser = async () => {
+    if (!crediting) return;
+    const amt = parseFloat(creditAmount);
+    if (!Number.isFinite(amt) || amt === 0) { toast.error("Enter a non-zero amount"); return; }
+    if (Math.abs(amt) > 1_000_000) { toast.error("Amount too large"); return; }
+    setCreditSubmitting(true);
+    try {
+      const { data, error } = await supabase.rpc("admin_credit_user", {
+        _user_id: crediting.id, _amount: amt, _note: creditNote || null,
+      });
+      if (error) throw error;
+      toast.success(`${amt > 0 ? "Credited" : "Debited"} $${Math.abs(amt).toFixed(2)} · new balance $${Number(data).toFixed(2)}`);
+      setCrediting(null); setCreditAmount(""); setCreditNote("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to credit user");
+    } finally {
+      setCreditSubmitting(false);
+    }
+  };
 
   const filteredDeposits = useMemo(() => {
     return deposits.filter((d) => {
