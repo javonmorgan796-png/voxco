@@ -40,7 +40,7 @@ const MIN_USD = 10;
 const MAX_USD = 10_000;
 
 const WithdrawSheet = ({ onClose, onShowHistory }: Props) => {
-  const { balance } = useWallet();
+  const { balance, loading: walletLoading } = useWallet();
   const { prices } = useCryptoPrices();
   const { addNotification } = useNotifications();
   const { isSuspended } = useSuspension();
@@ -53,11 +53,11 @@ const WithdrawSheet = ({ onClose, onShowHistory }: Props) => {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    setNetwork(META[sym].networks[0]);
+    setNetwork(META[sym]?.networks?.[0] || META.USDT.networks[0]);
   }, [sym]);
 
   const amountNum = Number(amount) || 0;
-  const price = prices[sym];
+  const price = prices?.[sym];
   const rate = price?.usd ?? (sym === "USDT" ? 1 : 0);
   const youReceive = rate > 0 ? amountNum / rate : amountNum;
   const feeCrypto = rate > 0 ? NETWORK_FEE_USD / rate : NETWORK_FEE_USD;
@@ -75,11 +75,12 @@ const WithdrawSheet = ({ onClose, onShowHistory }: Props) => {
   const handlePaste = async () => {
     try {
       const text = await navigator.clipboard.readText();
-      if (text) {
+      if (text?.trim()) {
         setAddress(text.trim());
         toast.success("Address pasted");
       }
-    } catch {
+    } catch (e) {
+      console.error("Clipboard error:", e);
       toast.error("Clipboard not available");
     }
   };
@@ -87,15 +88,16 @@ const WithdrawSheet = ({ onClose, onShowHistory }: Props) => {
   const handleSubmit = async () => {
     if (isSuspended) return toast.error("Account suspended");
     if (error) return toast.error(error);
-    if (!address.trim()) return toast.error("Enter your wallet address");
+    if (!address?.trim()) return toast.error("Enter your wallet address");
 
     setSubmitting(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      const { data: { session }, error: sessionErr } = await supabase.auth.getSession();
+      if (sessionErr || !session?.user?.id) {
         toast.error("Sign in required");
         return;
       }
+
       const { error: insErr } = await supabase.from("withdrawal_requests").insert({
         user_id: session.user.id,
         amount_usd: amountNum,
@@ -107,7 +109,9 @@ const WithdrawSheet = ({ onClose, onShowHistory }: Props) => {
 
       try {
         mongoSync("withdrawal_requested", { amount_usd: amountNum, crypto: sym, destination_address: address });
-      } catch { /* ignore */ }
+      } catch (e) {
+        console.warn("MongoDB sync failed:", e);
+      }
 
       addNotification(
         "withdrawal",
@@ -117,13 +121,22 @@ const WithdrawSheet = ({ onClose, onShowHistory }: Props) => {
       toast.success("Withdrawal request submitted");
       onClose();
     } catch (err) {
+      console.error("Withdrawal submission error:", err);
       toast.error(err instanceof Error ? err.message : "Submission failed");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const balanceUsdt = balance; // 1:1 display
+  if (walletLoading) {
+    return (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+      </div>
+    );
+  }
+
+  const balanceUsdt = balance ?? 0; // 1:1 display
 
   return (
     <motion.div
@@ -164,7 +177,7 @@ const WithdrawSheet = ({ onClose, onShowHistory }: Props) => {
             <div className="flex-1 min-w-0">
               <p className="text-xs text-white/70">Available Balance</p>
               <p className="text-2xl font-extrabold text-emerald-400 leading-tight">
-                ${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ${(balance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
               <p className="text-[11px] text-white/60 mt-0.5">≈ {balanceUsdt.toFixed(2)} USDT</p>
             </div>
@@ -229,10 +242,10 @@ const WithdrawSheet = ({ onClose, onShowHistory }: Props) => {
               <span>Max: ${MAX_USD.toLocaleString()}</span>
             </div>
             <button
-              onClick={() => setAmount(String(Math.min(balance, MAX_USD).toFixed(2)))}
+              onClick={() => setAmount(String(Math.min(balance ?? 0, MAX_USD).toFixed(2)))}
               className="text-emerald-400 font-semibold"
             >
-              Available: ${balance.toFixed(2)}
+              Available: ${(balance ?? 0).toFixed(2)}
             </button>
           </div>
           {error && (
@@ -271,7 +284,7 @@ const WithdrawSheet = ({ onClose, onShowHistory }: Props) => {
               type="text"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              placeholder={`Enter ${sym} (${META[sym].network}) wallet address`}
+              placeholder={`Enter ${sym} (${META[sym]?.network || "unknown"}) wallet address`}
               className="flex-1 bg-transparent px-4 py-4 text-sm outline-none placeholder:text-white/40"
             />
             <button
@@ -285,7 +298,7 @@ const WithdrawSheet = ({ onClose, onShowHistory }: Props) => {
           <div className="mt-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 flex gap-2">
             <ShieldCheck className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
             <p className="text-xs text-emerald-100/90">
-              Make sure the address is correct and on the <strong>{META[sym].network}</strong> network.
+              Make sure the address is correct and on the <strong>{META[sym]?.network || "correct"}</strong> network.
             </p>
           </div>
         </Step>
@@ -307,10 +320,13 @@ const WithdrawSheet = ({ onClose, onShowHistory }: Props) => {
                 exit={{ height: 0, opacity: 0 }}
                 className="mt-2 rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden"
               >
-                {META[sym].networks.map((n) => (
+                {(META[sym]?.networks ?? []).map((n) => (
                   <button
                     key={n}
-                    onClick={() => { setNetwork(n); setNetworkOpen(false); }}
+                    onClick={() => {
+                      setNetwork(n);
+                      setNetworkOpen(false);
+                    }}
                     className={`w-full text-left px-4 py-3 text-sm hover:bg-white/5 ${
                       network === n ? "text-emerald-400 font-semibold" : "text-white/80"
                     }`}
@@ -340,8 +356,8 @@ const WithdrawSheet = ({ onClose, onShowHistory }: Props) => {
       <div className="sticky bottom-0 z-10 bg-[#05070a]/95 backdrop-blur border-t border-white/5 px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+12px)]">
         <button
           onClick={handleSubmit}
-          disabled={submitting || !!error || !address.trim() || !amount || isSuspended}
-          className="w-full inline-flex items-center justify-center gap-2 py-4 rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 text-black font-bold text-base shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={submitting || !!error || !address?.trim() || !amount || isSuspended}
+          className="w-full inline-flex items-center justify-center gap-2 py-4 rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 text-black font-bold text-base shadow-lg shadow-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition"
         >
           {submitting ? (
             <Loader2 className="w-5 h-5 animate-spin" />
