@@ -189,11 +189,10 @@ const WalletScreen = ({ onClose }: WalletScreenProps) => {
         </div>
       </div>
 
-      {/* Crypto Deposit Sheet */}
+      {/* Sheets */}
       <AnimatePresence>
-        {showCryptoDeposit && (
-          <CryptoDepositSheet onClose={() => setShowCryptoDeposit(false)} />
-        )}
+        {showDeposit && <DepositSheet onClose={() => setShowDeposit(false)} />}
+        {showWithdraw && <WithdrawSheet onClose={() => setShowWithdraw(false)} />}
       </AnimatePresence>
     </motion.div>
   );
