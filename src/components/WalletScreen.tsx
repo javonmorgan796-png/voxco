@@ -6,9 +6,8 @@ import { useWallet, WalletTransaction } from "@/hooks/useWallet";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useSuspension } from "@/hooks/useSuspension";
 import { supabase } from "@/integrations/supabase/client";
-import { mongoSync } from "@/lib/mongoSync";
-import { toast } from "sonner";
-import CryptoDepositSheet from "./CryptoDepositSheet";
+import DepositSheet from "./DepositSheet";
+import WithdrawSheet from "./WithdrawSheet";
 
 interface WalletScreenProps {
   onClose: () => void;
