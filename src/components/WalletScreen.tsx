@@ -26,15 +26,10 @@ interface MyRequest {
 }
 
 const WalletScreen = ({ onClose }: WalletScreenProps) => {
-  const { balance, transactions, deposit } = useWallet();
-  const { addNotification } = useNotifications();
+  const { balance, transactions } = useWallet();
   const { isSuspended } = useSuspension();
-  const [activeTab, setActiveTab] = useState<"overview" | "deposit" | "withdraw">("overview");
-  const [amount, setAmount] = useState("");
-  const [destAddr, setDestAddr] = useState("");
-  const [crypto, setCrypto] = useState<Crypto>("USDT");
-  const [showCryptoDeposit, setShowCryptoDeposit] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [showDeposit, setShowDeposit] = useState(false);
+  const [showWithdraw, setShowWithdraw] = useState(false);
   const [myRequests, setMyRequests] = useState<MyRequest[]>([]);
 
   const fetchRequests = async () => {
@@ -60,47 +55,6 @@ const WalletScreen = ({ onClose }: WalletScreenProps) => {
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, []);
-
-  const handleDepositRequest = async () => {
-    if (isSuspended) { toast.error("Account suspended"); return; }
-    const val = parseFloat(amount);
-    if (!val || val <= 0) { toast.error("Enter a valid amount"); return; }
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) { toast.error("Sign in required"); return; }
-    setSubmitting(true);
-    const { error } = await supabase.from("deposit_requests").insert({
-      user_id: session.user.id, amount_usd: val, crypto,
-    });
-    setSubmitting(false);
-    if (error) { toast.error(error.message); return; }
-    addNotification("deposit", "Deposit request submitted", `$${val.toFixed(2)} (${crypto}) is pending admin approval.`);
-    toast.success("Deposit request sent for approval");
-    mongoSync("deposit_requested", { amount_usd: val, crypto });
-    setAmount("");
-    setActiveTab("overview");
-  };
-
-  const handleWithdrawRequest = async () => {
-    if (isSuspended) { toast.error("Account suspended"); return; }
-    const val = parseFloat(amount);
-    if (!val || val <= 0) { toast.error("Enter a valid amount"); return; }
-    if (val > balance) { toast.error("Insufficient balance"); return; }
-    if (!destAddr.trim()) { toast.error("Enter a destination address"); return; }
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) { toast.error("Sign in required"); return; }
-    setSubmitting(true);
-    const { error } = await supabase.from("withdrawal_requests").insert({
-      user_id: session.user.id, amount_usd: val, crypto, destination_address: destAddr.trim(),
-    });
-    setSubmitting(false);
-    if (error) { toast.error(error.message); return; }
-    addNotification("withdrawal", "Withdrawal request submitted", `$${val.toFixed(2)} (${crypto}) → ${destAddr.slice(0, 10)}… pending approval.`);
-    toast.success("Withdrawal request sent for approval");
-    mongoSync("withdrawal_requested", { amount_usd: val, crypto, destination_address: destAddr });
-    setAmount("");
-    setDestAddr("");
-    setActiveTab("overview");
-  };
 
   const getIcon = (type: WalletTransaction["type"]) => {
     switch (type) {
