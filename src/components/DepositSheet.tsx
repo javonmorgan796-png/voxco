@@ -55,15 +55,15 @@ const DepositSheet = ({ onClose }: Props) => {
 
   // active crypto wallets only
   const cryptoWallets = useMemo(
-    () => wallets.filter((w) => w.crypto !== "BANK" && w.is_active),
+    () => wallets?.filter((w) => w?.crypto !== "BANK" && w?.is_active) ?? [],
     [wallets],
   );
   const availableSyms = useMemo(
-    () => Array.from(new Set(cryptoWallets.map((w) => w.crypto))) as Sym[],
+    () => Array.from(new Set(cryptoWallets.map((w) => w?.crypto))).filter(Boolean) as Sym[],
     [cryptoWallets],
   );
   const wallet = useMemo(
-    () => cryptoWallets.find((w) => w.crypto === sym) ?? cryptoWallets[0],
+    () => cryptoWallets.find((w) => w?.crypto === sym) ?? cryptoWallets[0] ?? null,
     [cryptoWallets, sym],
   );
 
@@ -75,8 +75,8 @@ const DepositSheet = ({ onClose }: Props) => {
   }, [availableSyms, sym]);
 
   const amountNum = Number(amount) || 0;
-  const price = wallet ? prices[wallet.crypto as Sym] : undefined;
-  const cryptoAmount = price && price.usd > 0 ? amountNum / price.usd : amountNum; // USDT≈1
+  const price = wallet?.crypto ? prices[wallet.crypto as Sym] : undefined;
+  const cryptoAmount = price?.usd && price.usd > 0 ? amountNum / price.usd : amountNum; // USDT≈1
   const rate = price?.usd ?? (sym === "USDT" ? 1 : 0);
 
   const amountError = (() => {
@@ -88,14 +88,17 @@ const DepositSheet = ({ onClose }: Props) => {
   })();
 
   const handleCopy = async () => {
-    if (!wallet?.address) return;
+    if (!wallet?.address) {
+      toast.error("No address available");
+      return;
+    }
     try {
       await navigator.clipboard.writeText(wallet.address);
       setCopied(true);
       toast.success(`${wallet.crypto} address copied`);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("Failed to copy");
+      toast.error("Failed to copy address");
     }
   };
 
@@ -106,7 +109,12 @@ const DepositSheet = ({ onClose }: Props) => {
       return;
     }
     setReceipt(f);
-    setReceiptPreview(f.type.startsWith("image/") ? URL.createObjectURL(f) : null);
+    try {
+      setReceiptPreview(f.type.startsWith("image/") ? URL.createObjectURL(f) : null);
+    } catch (e) {
+      console.warn("Failed to create object URL:", e);
+      setReceiptPreview(null);
+    }
   };
 
   const handleSubmit = async () => {
@@ -117,16 +125,19 @@ const DepositSheet = ({ onClose }: Props) => {
 
     setSubmitting(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      const { data: { session }, error: sessionErr } = await supabase.auth.getSession();
+      if (sessionErr || !session?.user?.id) {
         toast.error("Sign in required");
         return;
       }
+
       const ext = receipt.name.split(".").pop()?.toLowerCase() || "jpg";
       const path = `${session.user.id}/${Date.now()}.${ext}`;
+      
       const { error: upErr } = await supabase.storage
         .from("receipts")
         .upload(path, receipt, { upsert: false, contentType: receipt.type });
+      
       if (upErr) throw upErr;
 
       const { error: insErr } = await supabase.from("deposit_requests").insert({
@@ -140,12 +151,15 @@ const DepositSheet = ({ onClose }: Props) => {
 
       try {
         mongoSync("deposit_requested", { amount_usd: amountNum, crypto: wallet.crypto, has_receipt: true });
-      } catch { /* ignore */ }
+      } catch (e) {
+        console.warn("MongoDB sync failed:", e);
+      }
 
       addNotification("deposit", "Deposit submitted", `$${amountNum.toFixed(2)} pending approval`);
       toast.success("Deposit submitted for approval");
       onClose();
     } catch (err) {
+      console.error("Deposit submission error:", err);
       toast.error(err instanceof Error ? err.message : "Submission failed");
     } finally {
       setSubmitting(false);
@@ -283,7 +297,7 @@ const DepositSheet = ({ onClose }: Props) => {
               <p className="text-[11px] uppercase tracking-wider text-white/50">You will send</p>
               <p className="mt-1 font-bold text-emerald-400 text-lg">
                 {cryptoAmount.toFixed(wallet?.crypto === "USDT" ? 2 : 8)}{" "}
-                <span className="text-sm">{wallet?.crypto}</span>
+                <span className="text-sm">{wallet?.crypto ?? sym}</span>
               </p>
             </div>
             <div>
@@ -293,7 +307,7 @@ const DepositSheet = ({ onClose }: Props) => {
               </p>
               <p className="mt-1 font-semibold text-white/90 text-sm">
                 {rate > 0
-                  ? `1 ${wallet?.crypto} = $${rate.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+                  ? `1 ${wallet?.crypto ?? sym} = $${rate.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
                   : "Live price unavailable"}
               </p>
             </div>
@@ -322,7 +336,7 @@ const DepositSheet = ({ onClose }: Props) => {
                   </div>
                   <div>
                     <div className="font-bold flex items-center gap-2">
-                      {meta.name} <span className="text-white/60 text-sm">({wallet.network || meta.network})</span>
+                      {meta.name} <span className="text-white/60 text-sm">({wallet?.network || meta.network})</span>
                     </div>
                     <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-semibold text-emerald-300 bg-emerald-500/15 rounded-full px-2 py-0.5">
                       Active
@@ -346,25 +360,28 @@ const DepositSheet = ({ onClose }: Props) => {
                 <div>
                   <p className="text-[11px] uppercase tracking-wider text-white/50 mb-1">Wallet Address</p>
                   <p className="font-mono text-sm break-all text-white/90 leading-relaxed">
-                    {wallet.address}
+                    {wallet?.address || "N/A"}
                   </p>
                   <button
                     onClick={handleCopy}
-                    className="mt-3 w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-emerald-500/40 text-emerald-300 bg-emerald-500/5 hover:bg-emerald-500/10 text-sm font-medium"
+                    disabled={!wallet?.address}
+                    className="mt-3 w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-emerald-500/40 text-emerald-300 bg-emerald-500/5 hover:bg-emerald-500/10 disabled:opacity-50 disabled:cursor-not-allowed transition"
                   >
                     {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                     {copied ? "Copied" : "Copy Address"}
                   </button>
                 </div>
-                <div className="bg-white p-2 rounded-xl">
-                  <QRCodeSVG value={wallet.address} size={110} />
-                </div>
+                {wallet?.address && (
+                  <div className="bg-white p-2 rounded-xl">
+                    <QRCodeSVG value={wallet.address} size={110} />
+                  </div>
+                )}
               </div>
 
               <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 flex gap-2">
                 <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
                 <p className="text-xs text-amber-100/90">
-                  Send only <strong>{meta.name} ({wallet.network || meta.network})</strong> to this address.
+                  Send only <strong>{meta.name} ({wallet?.network || meta.network})</strong> to this address.
                   Sending other coins may result in permanent loss.
                 </p>
               </div>
@@ -391,7 +408,7 @@ const DepositSheet = ({ onClose }: Props) => {
             </div>
             <div className="flex-1">
               <div className="font-semibold text-sm">
-                {receipt ? receipt.name : "Upload Screenshot or Receipt"}
+                {receipt?.name || "Upload Screenshot or Receipt"}
               </div>
               <div className="text-[11px] text-white/50 mt-0.5">PNG, JPG, JPEG, PDF (Max 5MB)</div>
             </div>
@@ -407,7 +424,7 @@ const DepositSheet = ({ onClose }: Props) => {
         <button
           onClick={handleSubmit}
           disabled={submitting || !!amountError || !wallet || !receipt || isSuspended}
-          className="w-full inline-flex items-center justify-center gap-2 py-4 rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 text-black font-bold text-base shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full inline-flex items-center justify-center gap-2 py-4 rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 text-black font-bold text-base shadow-lg shadow-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition"
         >
           {submitting ? (
             <Loader2 className="w-5 h-5 animate-spin" />
