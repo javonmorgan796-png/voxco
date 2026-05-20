@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-import { X, Wallet, ArrowUpRight, ArrowDownLeft, TrendingUp, Gift, Zap, DollarSign, Bitcoin, Clock, CheckCircle2, XCircle } from "lucide-react";
+import { X, Wallet, ArrowUpRight, ArrowDownLeft, TrendingUp, Gift, Zap, DollarSign, Clock, CheckCircle2, XCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useWallet, WalletTransaction } from "@/hooks/useWallet";
-import { useNotifications } from "@/hooks/useNotifications";
 import { useSuspension } from "@/hooks/useSuspension";
 import { supabase } from "@/integrations/supabase/client";
 import DepositSheet from "./DepositSheet";
@@ -13,7 +12,6 @@ interface WalletScreenProps {
   onClose: () => void;
 }
 
-const QUICK_AMOUNTS = [50, 100, 250, 500];
 type Crypto = "BTC" | "ETH" | "USDT";
 
 interface MyRequest {
