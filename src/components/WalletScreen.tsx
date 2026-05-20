@@ -111,95 +111,24 @@ const WalletScreen = ({ onClose }: WalletScreenProps) => {
         {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-3">
           <Button
-            onClick={() => setShowCryptoDeposit(true)}
-            className="flex items-center gap-2 py-6 bg-gradient-to-r from-yellow-500 to-amber-600 text-white border-0"
+            onClick={() => setShowDeposit(true)}
+            disabled={isSuspended}
+            className="flex items-center gap-2 py-6 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white border-0"
           >
-            <Bitcoin className="w-5 h-5" /> Crypto Deposit
+            <ArrowDownLeft className="w-5 h-5" /> Deposit
           </Button>
           <Button
-            onClick={() => setActiveTab("withdraw")}
-            variant={activeTab === "withdraw" ? "default" : "outline"}
+            onClick={() => setShowWithdraw(true)}
+            disabled={isSuspended}
+            variant="outline"
             className="flex items-center gap-2 py-6"
           >
             <ArrowUpRight className="w-5 h-5" /> Withdraw
           </Button>
         </div>
-
-        {/* Deposit / Withdraw Form */}
-        <AnimatePresence mode="wait">
-          {(activeTab === "deposit" || activeTab === "withdraw") && (
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="glass-card p-4 space-y-4"
-            >
-              <h3 className="font-semibold text-foreground">
-                {activeTab === "deposit" ? "Request Deposit" : "Request Withdrawal"}
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                {activeTab === "deposit"
-                  ? "Submit your deposit; admin will credit your balance after confirming the on-chain transfer."
-                  : "Submit your withdrawal; admin will review and process the payout."}
-              </p>
-
-              <div className="flex gap-2">
-                {(["BTC", "ETH", "USDT"] as Crypto[]).map((c) => (
-                  <button key={c} onClick={() => setCrypto(c)}
-                    className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors ${
-                      crypto === c ? "bg-primary text-primary-foreground" : "bg-muted/50 text-foreground hover:bg-muted"
-                    }`}>{c}</button>
-                ))}
-              </div>
-
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
-                  type="number"
-                  placeholder="Enter amount in USD"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-muted/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                />
-              </div>
-
-              <div className="flex gap-2">
-                {QUICK_AMOUNTS.map((qa) => (
-                  <button
-                    key={qa}
-                    onClick={() => setAmount(String(qa))}
-                    className="flex-1 py-2 rounded-lg bg-muted/50 text-sm font-medium text-foreground hover:bg-muted transition-colors"
-                  >
-                    ${qa}
-                  </button>
-                ))}
-              </div>
-
-              {activeTab === "withdraw" && (
-                <input
-                  type="text"
-                  placeholder={`Your ${crypto} destination address`}
-                  value={destAddr}
-                  onChange={(e) => setDestAddr(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-muted/50 border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                />
-              )}
-
-              <Button
-                onClick={activeTab === "deposit" ? handleDepositRequest : handleWithdrawRequest}
-                className="w-full"
-                size="lg"
-                disabled={submitting || isSuspended}
-              >
-                {submitting ? "Submitting…" : activeTab === "deposit" ? "Submit deposit request" : "Submit withdrawal request"}
-              </Button>
-              {isSuspended && (
-                <p className="text-xs text-destructive text-center">Your account is suspended.</p>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {isSuspended && (
+          <p className="text-xs text-destructive text-center">Your account is suspended.</p>
+        )}
 
         {/* My Pending Requests */}
         {myRequests.length > 0 && (
