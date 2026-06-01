@@ -536,9 +536,11 @@ const VIPSheet = ({ onClose, onOpenAdmin }: VIPSheetProps) => {
                     </button>
                     <button
                       onClick={handleConfirmJoin}
-                      className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-yellow-500 to-amber-600 text-white font-bold text-sm"
+                      disabled={purchasing}
+                      className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-yellow-500 to-amber-600 text-white font-bold text-sm disabled:opacity-60 flex items-center justify-center gap-2"
                     >
-                      Confirm — ${confirmPlan.price}
+                      {purchasing && <Loader2 className="w-4 h-4 animate-spin" />}
+                      {purchasing ? "Processing..." : `Confirm — $${confirmPlan.price}`}
                     </button>
                   </div>
                 </motion.div>
