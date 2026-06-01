@@ -1,7 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-
-const VIP_KEY = "vip_membership";
 
 export interface VIPPlan {
   id: string;
@@ -19,7 +17,6 @@ export const VIP_PLANS: VIPPlan[] = [
   { id: "12m", label: "12 Months", months: 12, price: 900, badge: "BEST VALUE", savings: "Save $300" },
 ];
 
-// Backward compat
 export const VIP_PRICE = VIP_PLANS[0].price;
 
 export interface VIPMembership {
@@ -33,24 +30,52 @@ const DEFAULT: VIPMembership = { active: false, joinedAt: null, expiresAt: null,
 
 export const useVIP = () => {
   const [membership, setMembership] = useState<VIPMembership>(DEFAULT);
+  const userIdRef = useRef<string | null>(null);
+
+  const refresh = useCallback(async (uid: string) => {
+    const { data, error } = await supabase
+      .from("vip_history")
+      .select("plan_id, new_expires_at, created_at")
+      .eq("user_id", uid)
+      .order("new_expires_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error || !data) {
+      setMembership(DEFAULT);
+      return;
+    }
+    const exp = new Date(data.new_expires_at).getTime();
+    if (exp < Date.now()) {
+      setMembership(DEFAULT);
+      return;
+    }
+    setMembership({
+      active: true,
+      joinedAt: data.created_at,
+      expiresAt: data.new_expires_at,
+      planId: data.plan_id,
+    });
+  }, []);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(VIP_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as VIPMembership;
-        // Auto-expire
-        if (parsed.expiresAt && new Date(parsed.expiresAt).getTime() < Date.now()) {
-          setMembership(DEFAULT);
-          localStorage.setItem(VIP_KEY, JSON.stringify(DEFAULT));
-        } else {
-          setMembership(parsed);
-        }
-      }
-    } catch {
-      setMembership(DEFAULT);
-    }
-  }, []);
+    let mounted = true;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!mounted) return;
+      if (!session?.user?.id) { setMembership(DEFAULT); return; }
+      userIdRef.current = session.user.id;
+      await refresh(session.user.id);
+    })();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_e, session) => {
+      const uid = session?.user?.id ?? null;
+      userIdRef.current = uid;
+      if (!uid) { setMembership(DEFAULT); return; }
+      await refresh(uid);
+    });
+
+    return () => { mounted = false; subscription.unsubscribe(); };
+  }, [refresh]);
 
   const previewExtension = useCallback((plan: VIPPlan) => {
     const now = new Date();
@@ -65,40 +90,29 @@ export const useVIP = () => {
     };
   }, [membership]);
 
-  const activate = useCallback(async (plan: VIPPlan = VIP_PLANS[0]) => {
-    const wasActive = membership.active;
-    const { previousExpires, newExpires } = previewExtension(plan);
-    const next: VIPMembership = {
-      active: true,
-      joinedAt: membership.joinedAt || new Date().toISOString(),
-      expiresAt: newExpires.toISOString(),
-      planId: plan.id,
-    };
-    setMembership(next);
-    localStorage.setItem(VIP_KEY, JSON.stringify(next));
+  const activate = useCallback(async (plan: VIPPlan = VIP_PLANS[0]): Promise<{ error: string | null }> => {
+    const uid = userIdRef.current;
+    if (!uid) return { error: "Not signed in" };
+    const { data, error } = await supabase.rpc("purchase_vip", {
+      _plan_id: plan.id,
+      _plan_label: plan.label,
+      _months: plan.months,
+      _price: plan.price,
+    });
+    if (error) return { error: error.message };
+    const row = Array.isArray(data) ? data[0] : data;
+    if (row?.new_expires_at) {
+      setMembership({
+        active: true,
+        joinedAt: membership.joinedAt || new Date().toISOString(),
+        expiresAt: row.new_expires_at,
+        planId: plan.id,
+      });
+    }
+    return { error: null };
+  }, [membership.joinedAt]);
 
-    // Record in vip_history (best-effort)
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        await supabase.from("vip_history").insert({
-          user_id: session.user.id,
-          plan_id: plan.id,
-          plan_label: plan.label,
-          months: plan.months,
-          price: plan.price,
-          action: wasActive ? "extended" : "joined",
-          previous_expires_at: previousExpires?.toISOString() || null,
-          new_expires_at: newExpires.toISOString(),
-        });
-      }
-    } catch { /* ignore */ }
-  }, [membership, previewExtension]);
-
-  const cancel = useCallback(() => {
-    setMembership(DEFAULT);
-    localStorage.setItem(VIP_KEY, JSON.stringify(DEFAULT));
-  }, []);
+  const cancel = useCallback(() => setMembership(DEFAULT), []);
 
   const daysRemaining = (() => {
     if (!membership.active || !membership.expiresAt) return 0;

@@ -53,11 +53,21 @@ const VIPSheet = ({ onClose, onOpenAdmin }: VIPSheetProps) => {
     setConfirmPlan(selectedPlan);
   };
 
+  const [purchasing, setPurchasing] = useState(false);
   const handleConfirmJoin = async () => {
-    if (!confirmPlan) return;
-    if (!withdraw(confirmPlan.price)) { toast.error("Payment failed"); return; }
+    if (!confirmPlan || purchasing) return;
+    if (balance < confirmPlan.price) {
+      toast.error("Insufficient balance", { description: `Need $${confirmPlan.price}, have $${balance.toFixed(2)}` });
+      return;
+    }
+    setPurchasing(true);
     const wasActive = isVIP;
-    await activate(confirmPlan);
+    const { error } = await activate(confirmPlan);
+    setPurchasing(false);
+    if (error) {
+      toast.error("Payment failed", { description: error });
+      return;
+    }
     setConfirmPlan(null);
     setShowCelebrate(true);
     const verb = wasActive ? "extended" : "joined";
@@ -526,9 +536,11 @@ const VIPSheet = ({ onClose, onOpenAdmin }: VIPSheetProps) => {
                     </button>
                     <button
                       onClick={handleConfirmJoin}
-                      className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-yellow-500 to-amber-600 text-white font-bold text-sm"
+                      disabled={purchasing}
+                      className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-yellow-500 to-amber-600 text-white font-bold text-sm disabled:opacity-60 flex items-center justify-center gap-2"
                     >
-                      Confirm — ${confirmPlan.price}
+                      {purchasing && <Loader2 className="w-4 h-4 animate-spin" />}
+                      {purchasing ? "Processing..." : `Confirm — $${confirmPlan.price}`}
                     </button>
                   </div>
                 </motion.div>

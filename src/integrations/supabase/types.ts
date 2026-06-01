@@ -467,6 +467,19 @@ export type Database = {
         }
         Returns: boolean
       }
+      purchase_vip: {
+        Args: {
+          _months: number
+          _plan_id: string
+          _plan_label: string
+          _price: number
+        }
+        Returns: {
+          action: string
+          new_balance: number
+          new_expires_at: string
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
