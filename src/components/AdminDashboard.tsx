@@ -271,21 +271,18 @@ const AdminDashboard = ({ onClose }: AdminDashboardProps) => {
 
             {tab === "withdrawals" && withdrawals.map((w) => {
               const u = userById(w.user_id);
-              const isBank = w.crypto === "BANK";
               return (
                 <div key={w.id} className="glass-card p-3">
                   <div className="flex items-center justify-between mb-2">
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-foreground truncate flex items-center gap-1.5">
-                        ${w.amount_usd.toFixed(2)} · {isBank ? <><Landmark className="w-3.5 h-3.5" /> Bank</> : w.crypto}
+                        ${w.amount_usd.toFixed(2)} · {w.crypto}
                       </p>
                       <p className="text-[11px] text-muted-foreground truncate">{u?.display_name || u?.username || w.user_id.slice(0, 8)} · {new Date(w.created_at).toLocaleString()}</p>
                     </div>
                     <StatusPill status={w.status} />
                   </div>
-                  {!isBank && (
-                    <p className="text-[10px] text-muted-foreground font-mono break-all mb-2">→ {w.destination_address}</p>
-                  )}
+                  <p className="text-[10px] text-muted-foreground font-mono break-all mb-2">→ {w.destination_address}</p>
                   {w.note && <p className="text-[11px] text-muted-foreground italic mb-2">"{w.note}"</p>}
                   {w.status === "rejected" && w.reject_reason && (
                     <div className="mb-2 p-2 rounded-lg bg-destructive/10 border border-destructive/30">
