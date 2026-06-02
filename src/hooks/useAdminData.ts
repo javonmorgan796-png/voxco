@@ -9,7 +9,7 @@ export interface AdminUserRow {
   created_at: string;
 }
 export type RequestStatus = "pending" | "approved" | "rejected";
-export type CryptoKind = "BTC" | "ETH" | "USDT" | "BANK";
+export type CryptoKind = "BTC" | "ETH" | "USDT";
 export type VipBetStatus = "pending" | "approved" | "rejected" | "won" | "lost";
 
 export interface DepositRow {
@@ -24,7 +24,6 @@ export interface WithdrawalRow {
   id: string; user_id: string; amount_usd: number; crypto: CryptoKind;
   destination_address: string; note: string | null; status: RequestStatus;
   created_at: string;
-  bank_name?: string | null; bank_account?: string | null; bank_reference?: string | null;
   reject_reason?: string | null;
 }
 export interface VipBetRow {
