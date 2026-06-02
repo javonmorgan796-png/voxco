@@ -9,7 +9,7 @@ export interface AdminUserRow {
   created_at: string;
 }
 export type RequestStatus = "pending" | "approved" | "rejected";
-export type CryptoKind = "BTC" | "ETH" | "USDT" | "BANK";
+export type CryptoKind = "BTC" | "ETH" | "USDT";
 export type VipBetStatus = "pending" | "approved" | "rejected" | "won" | "lost";
 
 export interface DepositRow {
@@ -24,7 +24,6 @@ export interface WithdrawalRow {
   id: string; user_id: string; amount_usd: number; crypto: CryptoKind;
   destination_address: string; note: string | null; status: RequestStatus;
   created_at: string;
-  bank_name?: string | null; bank_account?: string | null; bank_reference?: string | null;
   reject_reason?: string | null;
 }
 export interface VipBetRow {
@@ -158,7 +157,7 @@ export const useAdminData = () => {
     }
     return error;
   };
-  const updateWithdrawal = async (id: string, patch: Partial<Pick<WithdrawalRow, "amount_usd" | "crypto" | "destination_address" | "note" | "bank_name" | "bank_account" | "bank_reference">>) => {
+  const updateWithdrawal = async (id: string, patch: Partial<Pick<WithdrawalRow, "amount_usd" | "crypto" | "destination_address" | "note">>) => {
     const before = withdrawals.find((w) => w.id === id) as unknown as Record<string, unknown> | undefined;
     const { error } = await supabase.from("withdrawal_requests").update(patch as any).eq("id", id);
     if (!error && before) {

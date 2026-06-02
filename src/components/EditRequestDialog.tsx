@@ -20,9 +20,6 @@ const EditRequestDialog = ({ open, kind, request, onClose, onSave }: EditRequest
   const [txHash, setTxHash] = useState("");
   const [destAddr, setDestAddr] = useState("");
   const [note, setNote] = useState("");
-  const [bankName, setBankName] = useState("");
-  const [bankAccount, setBankAccount] = useState("");
-  const [bankRef, setBankRef] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -30,9 +27,6 @@ const EditRequestDialog = ({ open, kind, request, onClose, onSave }: EditRequest
     setAmount(String(request.amount_usd));
     setCrypto(request.crypto);
     setNote(request.note || "");
-    setBankName(request.bank_name || "");
-    setBankAccount(request.bank_account || "");
-    setBankRef(request.bank_reference || "");
     if (kind === "deposit") {
       setTxHash((request as DepositRow).tx_hash || "");
     } else {
@@ -41,7 +35,6 @@ const EditRequestDialog = ({ open, kind, request, onClose, onSave }: EditRequest
   }, [request, kind]);
 
   if (!request) return null;
-  const isBank = crypto === "BANK";
 
   const handleSave = async () => {
     const amt = parseFloat(amount);
@@ -51,15 +44,12 @@ const EditRequestDialog = ({ open, kind, request, onClose, onSave }: EditRequest
       amount_usd: amt,
       crypto,
       note: note || null,
-      bank_name: isBank ? (bankName || null) : null,
-      bank_account: isBank ? (bankAccount || null) : null,
-      bank_reference: isBank ? (bankRef || null) : null,
     };
     if (kind === "deposit") {
-      patch.tx_hash = isBank ? null : (txHash || null);
+      patch.tx_hash = txHash || null;
     } else {
-      if (!isBank && !destAddr.trim()) { setSaving(false); toast.error("Destination address required"); return; }
-      patch.destination_address = isBank ? (bankAccount || "BANK") : destAddr.trim();
+      if (!destAddr.trim()) { setSaving(false); toast.error("Destination address required"); return; }
+      patch.destination_address = destAddr.trim();
     }
     const err = await onSave(request.id, patch);
     setSaving(false);
@@ -93,7 +83,7 @@ const EditRequestDialog = ({ open, kind, request, onClose, onSave }: EditRequest
               {/* Method */}
               <div>
                 <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Method</label>
-                <div className="grid grid-cols-4 gap-2 mt-1">
+                <div className="grid grid-cols-3 gap-2 mt-1">
                   {CRYPTO_OPTIONS.map((c) => (
                     <button
                       key={c}
@@ -104,7 +94,7 @@ const EditRequestDialog = ({ open, kind, request, onClose, onSave }: EditRequest
                           : "bg-muted/40 text-foreground hover:bg-muted/60"
                       }`}
                     >
-                      {c === "BANK" ? "Bank" : c}
+                      {c}
                     </button>
                   ))}
                 </div>
@@ -123,7 +113,7 @@ const EditRequestDialog = ({ open, kind, request, onClose, onSave }: EditRequest
               </div>
 
               {/* Crypto details */}
-              {!isBank && kind === "deposit" && (
+              {kind === "deposit" && (
                 <div>
                   <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Transaction hash</label>
                   <input
@@ -134,7 +124,7 @@ const EditRequestDialog = ({ open, kind, request, onClose, onSave }: EditRequest
                   />
                 </div>
               )}
-              {!isBank && kind === "withdrawal" && (
+              {kind === "withdrawal" && (
                 <div>
                   <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Destination address</label>
                   <input
@@ -143,40 +133,6 @@ const EditRequestDialog = ({ open, kind, request, onClose, onSave }: EditRequest
                     placeholder={`User's ${crypto} address`}
                     className="w-full mt-1 bg-muted/40 rounded-lg px-3 py-2 text-xs font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   />
-                </div>
-              )}
-
-              {/* Bank details */}
-              {isBank && (
-                <div className="space-y-2 p-3 bg-muted/20 rounded-xl border border-border/40">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Bank transfer details</p>
-                  <div>
-                    <label className="text-[10px] text-muted-foreground">Bank name</label>
-                    <input
-                      value={bankName}
-                      onChange={(e) => setBankName(e.target.value)}
-                      placeholder="e.g. Chase, Barclays"
-                      className="w-full mt-0.5 bg-background/60 rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-muted-foreground">Account number / IBAN</label>
-                    <input
-                      value={bankAccount}
-                      onChange={(e) => setBankAccount(e.target.value)}
-                      placeholder="Account number or IBAN"
-                      className="w-full mt-0.5 bg-background/60 rounded-lg px-3 py-2 text-xs font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-muted-foreground">Reference</label>
-                    <input
-                      value={bankRef}
-                      onChange={(e) => setBankRef(e.target.value)}
-                      placeholder="Transfer reference / memo"
-                      className="w-full mt-0.5 bg-background/60 rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                    />
-                  </div>
                 </div>
               )}
 
