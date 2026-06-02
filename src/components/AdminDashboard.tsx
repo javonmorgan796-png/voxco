@@ -227,19 +227,18 @@ const AdminDashboard = ({ onClose }: AdminDashboardProps) => {
 
             {tab === "deposits" && filteredDeposits.map((d) => {
               const u = userById(d.user_id);
-              const isBank = d.crypto === "BANK";
               return (
                 <div key={d.id} className="glass-card p-3">
                   <div className="flex items-center justify-between mb-2">
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-foreground truncate flex items-center gap-1.5">
-                        ${d.amount_usd.toFixed(2)} · {isBank ? <><Landmark className="w-3.5 h-3.5" /> Bank</> : d.crypto}
+                        ${d.amount_usd.toFixed(2)} · {d.crypto}
                       </p>
                       <p className="text-[11px] text-muted-foreground truncate">{u?.display_name || u?.username || d.user_id.slice(0, 8)} · {new Date(d.created_at).toLocaleString()}</p>
                     </div>
                     <StatusPill status={d.status} />
                   </div>
-                  {!isBank && d.tx_hash && <p className="text-[10px] text-muted-foreground font-mono break-all mb-1">tx: {d.tx_hash}</p>}
+                  {d.tx_hash && <p className="text-[10px] text-muted-foreground font-mono break-all mb-1">tx: {d.tx_hash}</p>}
                   {d.note && <p className="text-[11px] text-muted-foreground italic mb-2 break-all">"{d.note}"</p>}
                   {d.status === "rejected" && d.reject_reason && (
                     <div className="mb-2 p-2 rounded-lg bg-destructive/10 border border-destructive/30">
