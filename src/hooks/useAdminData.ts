@@ -157,7 +157,7 @@ export const useAdminData = () => {
     }
     return error;
   };
-  const updateWithdrawal = async (id: string, patch: Partial<Pick<WithdrawalRow, "amount_usd" | "crypto" | "destination_address" | "note" | "bank_name" | "bank_account" | "bank_reference">>) => {
+  const updateWithdrawal = async (id: string, patch: Partial<Pick<WithdrawalRow, "amount_usd" | "crypto" | "destination_address" | "note">>) => {
     const before = withdrawals.find((w) => w.id === id) as unknown as Record<string, unknown> | undefined;
     const { error } = await supabase.from("withdrawal_requests").update(patch as any).eq("id", id);
     if (!error && before) {
