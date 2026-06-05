@@ -449,48 +449,33 @@ const DepositSheet = ({ onClose }: Props) => {
 
         <section className="space-y-3">
           <h3 className="text-sm font-semibold">
-            Upload Receipt
+            Transaction Hash
           </h3>
 
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*,application/pdf"
-            className="hidden"
-            onChange={(e) =>
-              pickFile(
-                e.target.files?.[0] || null
-              )
-            }
-          />
-
-          <button
-            onClick={() =>
-              fileRef.current?.click()
-            }
-            className="w-full rounded-2xl border-2 border-dashed border-white/10 p-5 flex items-center gap-4"
-          >
-            <UploadCloud className="w-6 h-6 text-emerald-400" />
-
-            <div className="text-left">
-              <div className="font-medium">
-                {receipt?.name ||
-                  "Upload Screenshot"}
-              </div>
-
-              <div className="text-xs text-white/50">
-                PNG, JPG, PDF
-              </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-3">
+            <div className="flex items-center gap-2 text-xs text-white/60">
+              <Hash className="w-4 h-4 text-emerald-400" />
+              Paste the TX ID / hash from your wallet after sending
             </div>
-          </button>
 
-          {receiptPreview && (
-            <img
-              src={receiptPreview}
-              alt="preview"
-              className="rounded-xl max-h-52 mx-auto"
+            <input
+              type="text"
+              value={txHash}
+              onChange={(e) => setTxHash(e.target.value)}
+              placeholder="e.g. 0x9f3a... or T1a2b3c..."
+              spellCheck={false}
+              autoComplete="off"
+              className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-3 font-mono text-sm outline-none focus:border-emerald-500/60"
             />
-          )}
+
+            {hashError && (
+              <p className="text-xs text-red-400">{hashError}</p>
+            )}
+
+            <p className="text-[11px] text-white/40">
+              Your deposit is credited automatically the moment an admin approves your transaction.
+            </p>
+          </div>
         </section>
       </div>
 
@@ -501,7 +486,8 @@ const DepositSheet = ({ onClose }: Props) => {
             submitting ||
             !!amountError ||
             !wallet ||
-            !receipt
+            !trimmedHash ||
+            !!hashError
           }
           className="w-full rounded-2xl bg-emerald-500 text-black font-bold py-4 flex items-center justify-center gap-2 disabled:opacity-50"
         >
