@@ -5,6 +5,7 @@ export interface AdminUserRow {
   id: string;
   username: string | null;
   display_name: string | null;
+  email: string | null;
   is_suspended: boolean;
   created_at: string;
 }
