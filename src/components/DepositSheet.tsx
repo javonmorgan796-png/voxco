@@ -164,28 +164,15 @@ const DepositSheet = ({ onClose }: Props) => {
     }
   };
 
-  const pickFile = (file: File | null) => {
-    if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("File must be below 5MB");
-      return;
-    }
-
-    setReceipt(file);
-
-    try {
-      if (file.type.startsWith("image/")) {
-        const url = URL.createObjectURL(file);
-        setReceiptPreview(url);
-      } else {
-        setReceiptPreview(null);
-      }
-    } catch (err) {
-      console.error(err);
-      setReceiptPreview(null);
-    }
-  };
+  const trimmedHash = txHash.trim();
+  const hashError = (() => {
+    if (!trimmedHash) return null;
+    if (trimmedHash.length < 10) return "Transaction hash looks too short";
+    if (trimmedHash.length > 200) return "Transaction hash too long";
+    if (!/^[a-zA-Z0-9:_-]+$/.test(trimmedHash))
+      return "Only letters, numbers, and -_: allowed";
+    return null;
+  })();
 
   const handleSubmit = async () => {
     if (isSuspended) {
@@ -203,8 +190,8 @@ const DepositSheet = ({ onClose }: Props) => {
       return;
     }
 
-    if (!receipt) {
-      toast.error("Upload payment proof");
+    if (!trimmedHash || hashError) {
+      toast.error(hashError || "Enter your transaction hash");
       return;
     }
 
@@ -221,30 +208,13 @@ const DepositSheet = ({ onClose }: Props) => {
         return;
       }
 
-      const ext =
-        receipt.name.split(".").pop()?.toLowerCase() || "jpg";
-
-      const filePath = `${session.user.id}/${Date.now()}.${ext}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("receipts")
-        .upload(filePath, receipt, {
-          upsert: false,
-          contentType: receipt.type,
-        });
-
-      if (uploadError) {
-        console.error(uploadError);
-        throw uploadError;
-      }
-
       const { error: insertError } = await supabase
         .from("deposit_requests")
         .insert({
           user_id: session.user.id,
           amount_usd: amountNum,
           crypto: wallet.crypto,
-          receipt_url: filePath,
+          tx_hash: trimmedHash,
           note: `${cryptoAmount.toFixed(
             wallet.crypto === "USDT" ? 2 : 8
           )} ${wallet.crypto}`,
