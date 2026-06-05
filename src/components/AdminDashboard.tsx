@@ -202,7 +202,8 @@ const AdminDashboard = ({ onClose }: AdminDashboardProps) => {
               <div key={u.id} className="glass-card p-3 flex items-center justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold text-foreground truncate">{u.display_name || u.username || "User"}</p>
-                  <p className="text-xs text-muted-foreground truncate">@{u.username || "—"} · joined {new Date(u.created_at).toLocaleDateString()}</p>
+                  <p className="text-xs text-muted-foreground truncate">@{u.username || "—"} · {u.email || "—"}</p>
+                  <p className="text-[10px] text-muted-foreground">Joined {new Date(u.created_at).toLocaleDateString()}</p>
                   {u.is_suspended && <span className="text-[10px] font-bold text-destructive uppercase">Suspended</span>}
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">

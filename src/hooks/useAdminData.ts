@@ -79,7 +79,7 @@ export const useAdminData = () => {
   const refresh = useCallback(async () => {
     setLoading(true);
     const [u, d, w, v, a] = await Promise.all([
-      supabase.from("profiles").select("id, username, display_name, is_suspended, created_at").order("created_at", { ascending: false }),
+      supabase.from("profiles").select("id, username, display_name, email, is_suspended, created_at").order("created_at", { ascending: false }),
       supabase.from("deposit_requests").select("*").order("created_at", { ascending: false }),
       supabase.from("withdrawal_requests").select("*").order("created_at", { ascending: false }),
       supabase.from("vip_bets").select("*").order("created_at", { ascending: false }),
