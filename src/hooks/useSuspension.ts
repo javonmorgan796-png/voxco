@@ -27,7 +27,7 @@ export const useSuspension = () => {
 
     // Realtime subscription so admin suspending takes effect immediately
     const channel = supabase
-      .channel("profile_suspension_self")
+      .channel(`profile_suspension_self_${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "profiles" },
