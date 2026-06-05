@@ -78,12 +78,9 @@ const DepositSheet = ({ onClose }: Props) => {
   const [amount, setAmount] = useState("100");
   const [copied, setCopied] = useState(false);
 
-  const [receipt, setReceipt] = useState<File | null>(null);
-  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+  const [txHash, setTxHash] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
-
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const cryptoWallets = useMemo(() => {
     return (
