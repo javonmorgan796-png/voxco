@@ -1,16 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   Headphones,
   ShieldCheck,
   Copy,
   Check,
-  RefreshCw,
-  UploadCloud,
   Loader2,
-  AlertTriangle,
-  Repeat2,
   Send,
+  Hash,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
@@ -81,12 +78,9 @@ const DepositSheet = ({ onClose }: Props) => {
   const [amount, setAmount] = useState("100");
   const [copied, setCopied] = useState(false);
 
-  const [receipt, setReceipt] = useState<File | null>(null);
-  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+  const [txHash, setTxHash] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
-
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const cryptoWallets = useMemo(() => {
     return (
@@ -170,28 +164,15 @@ const DepositSheet = ({ onClose }: Props) => {
     }
   };
 
-  const pickFile = (file: File | null) => {
-    if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("File must be below 5MB");
-      return;
-    }
-
-    setReceipt(file);
-
-    try {
-      if (file.type.startsWith("image/")) {
-        const url = URL.createObjectURL(file);
-        setReceiptPreview(url);
-      } else {
-        setReceiptPreview(null);
-      }
-    } catch (err) {
-      console.error(err);
-      setReceiptPreview(null);
-    }
-  };
+  const trimmedHash = txHash.trim();
+  const hashError = (() => {
+    if (!trimmedHash) return null;
+    if (trimmedHash.length < 10) return "Transaction hash looks too short";
+    if (trimmedHash.length > 200) return "Transaction hash too long";
+    if (!/^[a-zA-Z0-9:_-]+$/.test(trimmedHash))
+      return "Only letters, numbers, and -_: allowed";
+    return null;
+  })();
 
   const handleSubmit = async () => {
     if (isSuspended) {
@@ -209,8 +190,8 @@ const DepositSheet = ({ onClose }: Props) => {
       return;
     }
 
-    if (!receipt) {
-      toast.error("Upload payment proof");
+    if (!trimmedHash || hashError) {
+      toast.error(hashError || "Enter your transaction hash");
       return;
     }
 
@@ -227,30 +208,13 @@ const DepositSheet = ({ onClose }: Props) => {
         return;
       }
 
-      const ext =
-        receipt.name.split(".").pop()?.toLowerCase() || "jpg";
-
-      const filePath = `${session.user.id}/${Date.now()}.${ext}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("receipts")
-        .upload(filePath, receipt, {
-          upsert: false,
-          contentType: receipt.type,
-        });
-
-      if (uploadError) {
-        console.error(uploadError);
-        throw uploadError;
-      }
-
       const { error: insertError } = await supabase
         .from("deposit_requests")
         .insert({
           user_id: session.user.id,
           amount_usd: amountNum,
           crypto: wallet.crypto,
-          receipt_url: filePath,
+          tx_hash: trimmedHash,
           note: `${cryptoAmount.toFixed(
             wallet.crypto === "USDT" ? 2 : 8
           )} ${wallet.crypto}`,
@@ -485,48 +449,33 @@ const DepositSheet = ({ onClose }: Props) => {
 
         <section className="space-y-3">
           <h3 className="text-sm font-semibold">
-            Upload Receipt
+            Transaction Hash
           </h3>
 
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*,application/pdf"
-            className="hidden"
-            onChange={(e) =>
-              pickFile(
-                e.target.files?.[0] || null
-              )
-            }
-          />
-
-          <button
-            onClick={() =>
-              fileRef.current?.click()
-            }
-            className="w-full rounded-2xl border-2 border-dashed border-white/10 p-5 flex items-center gap-4"
-          >
-            <UploadCloud className="w-6 h-6 text-emerald-400" />
-
-            <div className="text-left">
-              <div className="font-medium">
-                {receipt?.name ||
-                  "Upload Screenshot"}
-              </div>
-
-              <div className="text-xs text-white/50">
-                PNG, JPG, PDF
-              </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-3">
+            <div className="flex items-center gap-2 text-xs text-white/60">
+              <Hash className="w-4 h-4 text-emerald-400" />
+              Paste the TX ID / hash from your wallet after sending
             </div>
-          </button>
 
-          {receiptPreview && (
-            <img
-              src={receiptPreview}
-              alt="preview"
-              className="rounded-xl max-h-52 mx-auto"
+            <input
+              type="text"
+              value={txHash}
+              onChange={(e) => setTxHash(e.target.value)}
+              placeholder="e.g. 0x9f3a... or T1a2b3c..."
+              spellCheck={false}
+              autoComplete="off"
+              className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-3 font-mono text-sm outline-none focus:border-emerald-500/60"
             />
-          )}
+
+            {hashError && (
+              <p className="text-xs text-red-400">{hashError}</p>
+            )}
+
+            <p className="text-[11px] text-white/40">
+              Your deposit is credited automatically the moment an admin approves your transaction.
+            </p>
+          </div>
         </section>
       </div>
 
@@ -537,7 +486,8 @@ const DepositSheet = ({ onClose }: Props) => {
             submitting ||
             !!amountError ||
             !wallet ||
-            !receipt
+            !trimmedHash ||
+            !!hashError
           }
           className="w-full rounded-2xl bg-emerald-500 text-black font-bold py-4 flex items-center justify-center gap-2 disabled:opacity-50"
         >
