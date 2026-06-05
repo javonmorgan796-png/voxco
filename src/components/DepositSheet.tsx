@@ -1,16 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   Headphones,
   ShieldCheck,
   Copy,
   Check,
-  RefreshCw,
-  UploadCloud,
   Loader2,
-  AlertTriangle,
-  Repeat2,
   Send,
+  Hash,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
